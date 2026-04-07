@@ -7,9 +7,6 @@ A pure web-based version that can be used immediately after download.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://mengxj319-creator.github.io/phenoharvest-analysis/)
 
-> 浏览器端气孔空间分布分析工具集 —— 无需安装，即开即用
-
-**[🚀 在线使用](https://mengxj319-creator.github.io/phenoharvest-analysis/)**
 
 ---
 
@@ -26,7 +23,7 @@ A pure web-based version that can be used immediately after download.
 
 ## 🚀 快速开始
 
-1. 打开 [在线工具](https://mengxj319-creator.github.io/phenoharvest-analysis/)
+1. 下载对应文件，双击打开
 2. 上传显微图像（支持 JPG/PNG/TIFF）
 3. 标注气孔位置：
    - **Ripley's K / KDE**: 拖拽画框
@@ -74,27 +71,7 @@ A pure web-based version that can be used immediately after download.
 | Mean/Std KDE | 跨图像密度聚合 | 平均密度场 + 标准差变异场 |
 
 ---
-
-## 💻 本地运行
-
-```bash
-# 克隆仓库
-git clone https://github.com/mengxj319-creator/phenoharvest-analysis.git
-
-# 进入目录
-cd phenoharvest-analysis
-
-# 用浏览器打开任意 HTML 文件即可使用
-open Phenoharvest_repley's_K_cn.html      # macOS
-start Phenoharvest_repley's_K_cn.html     # Windows
-
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://mengxj319-creator.github.io/phenoharvest-analysis/)
-
 > ブラウザ上で動作する気孔の空間分布解析ツールセット —— インストール不要・すぐに使用可能
-
-**[🚀 オンラインで使用](https://mengxj319-creator.github.io/phenoharvest-analysis/)**
 
 ---
 
@@ -111,7 +88,7 @@ start Phenoharvest_repley's_K_cn.html     # Windows
 
 ## 🚀 クイックスタート
 
-1. [オンラインツール](https://mengxj319-creator.github.io/phenoharvest-analysis/)を開く  
+1. フィルターをダウンロード
 2. 顕微鏡画像をアップロード（JPG/PNG/TIFF対応）  
 3. 気孔位置をアノテーション：
    - **Ripley's K / KDE**: ドラッグで矩形描画  
@@ -160,91 +137,19 @@ start Phenoharvest_repley's_K_cn.html     # Windows
 
 ---
 
-## 💻 ローカル実行
+## 💻 本地运行
 
 ```bash
+# 克隆仓库
 git clone https://github.com/mengxj319-creator/phenoharvest-analysis.git
+
+# 进入目录
 cd phenoharvest-analysis
 
+# 用浏览器打开任意 HTML 文件即可使用
+open Phenoharvest_repley's_K_cn.html      # macOS
+start Phenoharvest_repley's_K_cn.html     # Windows
 
----
 
-# 🇺🇸 English Version
 
-```markdown
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://mengxj319-creator.github.io/phenoharvest-analysis/)
 
-> Browser-based stomatal spatial distribution analysis toolkit — no installation required, ready to use instantly
-
-**[🚀 Try Online](https://mengxj319-creator.github.io/phenoharvest-analysis/)**
-
----
-
-## 📊 Features
-
-| Tool | Purpose | Method |
-|:---|:---|:---|
-| **Ripley's K** | Spatial point pattern analysis | Detect clustering / regularity / randomness |
-| **Moran's I** | Spatial autocorrelation | Polygon annotation + spatial weight matrix |
-| **Single-image KDE** | Kernel density estimation | Heatmap visualization |
-| **Multi-image Mean/Std KDE** | Batch density analysis | Mean & variation across images |
-
----
-
-## 🚀 Quick Start
-
-1. Open the [web tool](https://mengxj319-creator.github.io/phenoharvest-analysis/)  
-2. Upload microscopy images (JPG/PNG/TIFF supported)  
-3. Annotate stomatal positions:
-   - **Ripley's K / KDE**: Drag to draw bounding boxes  
-   - **Moran's I**: Click to draw polygons  
-4. Adjust parameters and generate results with one click  
-
-**⚡ All computations run locally in your browser — no data is uploaded**
-
----
-
-## ⌨️ Shortcuts
-
-| Key | Function |
-|:---|:---|
-| `D` | Draw mode |
-| `S` | Select/move mode |
-| `Ctrl + Z` | Undo |
-| `Delete` / `Backspace` | Delete selection |
-| `ESC` | Cancel |
-
----
-
-## 📁 Import & Export
-
-### Import
-- **Images**: `.jpg` `.png` `.tiff` `.bmp`
-- **Annotations**: COCO JSON format
-
-### Export
-| Format | Content |
-|:---|:---|
-| CSV | Coordinates, area, Moran’s I, Ripley’s K |
-| PNG | Heatmaps, L-function plots |
-| COCO JSON | Annotation data for model training |
-
----
-
-## 🔬 Methods
-
-| Tool | Algorithm | Output |
-|:---|:---|:---|
-| Ripley’s K | K(d) → L(d) transform | Pattern classification + confidence interval |
-| Moran’s I | Spatial weights + permutation test | I, Z-score, P-value, quadrant classification |
-| KDE | Gaussian kernel density | Heatmap + contours |
-| Mean/Std KDE | Aggregated density | Mean field + variability |
-
----
-
-## 💻 Local Setup
-
-```bash
-git clone https://github.com/mengxj319-creator/phenoharvest-analysis.git
-cd phenoharvest-analysis
