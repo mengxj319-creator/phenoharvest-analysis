@@ -7,7 +7,7 @@ Stomatal Spatial Distribution Analysis Tool – Spatial statistics tools includi
 A pure web-based version that can be used immediately after download. English version on the way!!!
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://github.com/mengxj319-creator)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://mengxj319-creator.github.io/phenoharvest-analysis/)
 
 ---
 
