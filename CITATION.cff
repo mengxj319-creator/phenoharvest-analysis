@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+title: "PhenoHarvest: Browser-based toolkit for stomatal spatial pattern analysis"
+message: "If you use this project, please cite it using the metadata below."
+type: software
+
+authors:
+  - family-names: "Meng"
+    given-names: "Xiangji"
+    orcid: "0009-0001-1690-6654"
+    affiliation: "Graduate School of Environmental Science, Hokkaido University"
+
+repository-code: "https://github.com/mengxj319-creator/phenoharvest-analysis"
+url: "https://github.com/mengxj319-creator/phenoharvest-analysis"
+
+license: "MIT"
+version: "0.1.0"
+date-released: "2026-04-13"
+
+abstract: >
+  PhenoHarvest is a browser-based toolkit for automated stomatal annotation and spatial pattern analysis.
+  It integrates multiple analytical approaches, including Ripley's K function, Moran's I,
+  single-image kernel density estimation (KDE), and multi-image mean/standard deviation KDE,
+  enabling high-throughput and reproducible analysis of stomatal spatial organization.
+
+keywords:
+  - stomata
+  - spatial analysis
+  - Ripley's K
+  - Moran's I
+  - KDE
+  - browser tool
+  - phenotyping
