@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ripley's K Analysis Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .canvas-container {
+            background: #000;
+            position: relative;
+        }
+        
+        .box-annotation {
+            position: absolute;
+            border: 2px solid #06b6d4;
+            background: rgba(6, 182, 212, 0.1);
+            cursor: move;
+            pointer-events: auto;
+            box-sizing: border-box;
+        }
+        
+        .box-annotation:hover {
+            background: rgba(6, 182, 212, 0.2);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+        }
+        
+        .box-annotation.selected {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.15);
+        }
+        
+        .delete-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 16px;
+            height: 16px;
+            background: #ef4444;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            color: white;
+            font-weight: bold;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        
+        .box-annotation:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .box-label {
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #06b6d4;
+            background: rgba(0,0,0,0.6);
+            padding: 0 3px;
+            border-radius: 3px;
+            line-height: 16px;
+            pointer-events: none;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .box-annotation.selected .box-label {
+            color: #f59e0b;
+        }
+
+        .thumb-annotated::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 7px;
+            height: 7px;
+            background: #22c55e;
+            border-radius: 50%;
+            border: 1px solid #000;
+        }
+        
+        .tool-btn {
+            transition: all 0.2s;
+        }
+        
+        .tool-btn:hover {
+            transform: translateY(-1px);
+        }
+        
+        .tool-btn.active {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-webkit-slider-track {
+            background: #334155;
+            height: 6px;
+            border-radius: 3px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            background: #06b6d4;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            margin-top: -5px;
+        }
+        
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .image-thumbnail {
+            min-width: 60px;
+            height: 40px;
+            border: 2px solid #475569;
+            border-radius: 4px;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+            background: #1e293b;
+        }
+        
+        .image-thumbnail:hover {
+            border-color: #06b6d4;
+        }
+        
+        .image-thumbnail.active {
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.3);
+        }
+        
+        .image-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .image-thumbnail .img-index {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 3px 0 0 0;
+        }
+        
+        .drop-zone {
+            border: 2px dashed rgba(6, 182, 212, 0.3);
+            transition: all 0.3s;
+        }
+        
+        .drop-zone.dragover {
+            border-color: #06b6d4;
+            background: rgba(6, 182, 212, 0.05);
+        }
+        
+        .heatmap-output {
+            background: #000;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .param-display {
+            font-family: 'JetBrains Mono', monospace;
+            color: #06b6d4;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass-panel border-b border-slate-700/50">
+        <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-lg font-bold text-white">Ripley's K Analyzer</h1>
+            </div>
+            
+            <button onclick="resetAll()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm transition-colors border border-slate-700">
+                Reset
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pt-16 pb-8 px-4 max-w-[1600px] mx-auto">
+        
+        <!-- Upload Section -->
+        <div id="uploadSection" class="max-w-xl mx-auto mt-16">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold mb-2">Ripley's K Analysis</h2>
+                <p class="text-slate-400 text-sm">Upload images → Mark targets with boxes → Generate Ripley's K result plots</p>
+            </div>
+            
+            <div id="dropZone" class="drop-zone rounded-xl p-12 text-center cursor-pointer bg-slate-800/30">
+                <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
+                <svg class="w-12 h-12 text-cyan-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                <p class="text-sm font-medium mb-1">Drag and drop images or click to upload</p>
+                <p class="text-xs text-slate-500">PNG, JPG, JPEG, BMP, TIFF</p>
+            </div>
+        </div>
+
+        <!-- Workspace -->
+        <div id="workspace" class="hidden grid grid-cols-12 gap-4">
+            
+            <!-- Left: Annotation -->
+            <div class="col-span-12 lg:col-span-7 space-y-3">
+                <div class="glass-panel rounded-xl p-3">
+                    <!-- Toolbar -->
+                    <div class="flex items-center gap-2 mb-3 pb-3 border-b border-slate-700/50">
+                        <button id="drawModeBtn" onclick="setMode('draw')" class="tool-btn active px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-medium flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Draw (D)
+                        </button>
+                        
+                        <button id="selectModeBtn" onclick="setMode('select')" class="tool-btn px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-medium flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                            Select (S)
+                        </button>
+                        
+                        <div class="h-4 w-px bg-slate-600"></div>
+                        
+                        <button onclick="clearAllBoxes()" class="tool-btn px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium border border-red-500/30">
+                            Clear All Boxes
+                        </button>
+                        
+                        <button onclick="undoLastBox()" class="tool-btn px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-medium">
+                            Undo
+                        </button>
+                        
+                        <div class="flex-1"></div>
+                        
+                        <span class="text-xs text-slate-400">Boxes: <span id="boxCount" class="text-cyan-400 font-bold">0</span></span>
+                    </div>
+
+                    <!-- Image List / Switcher -->
+                    <div id="imageListContainer" class="mb-3 hidden">
+                        <div class="flex items-center gap-2 pb-2 border-b border-slate-700/50">
+                            <span class="text-xs text-slate-400">Image List:</span>
+                            <div id="imageList" class="flex-1 flex gap-2 overflow-x-auto">
+                                <!-- Thumbnails will be inserted here -->
+                            </div>
+                            <button onclick="addMoreImages()" class="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs">
+                                + Add
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Image Canvas -->
+                    <div id="canvasWrapperOuter" class="rounded-lg overflow-auto relative bg-black" style="min-height: 300px; max-height: 60vh;">
+                        <div id="canvasWrapper" class="relative" style="transform-origin: top left; display: inline-block;">
+                            <div id="annotationLayer" class="absolute top-0 left-0 z-10" style="pointer-events: none; transform-origin: top left;"></div>
+                            <canvas id="mainCanvas" style="pointer-events: none; display: block;"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Image Info -->
+                    <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+                        <span id="imgInfo">No image loaded</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="zoomImage(0.9)" class="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-xs">-</button>
+                            <span id="zoomLevel" class="w-10 text-center">100%</span>
+                            <button onclick="zoomImage(1.1)" class="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-xs">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">X Mean</p>
+                        <p id="meanX" class="stat-value text-lg font-bold text-cyan-400">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">Y Mean</p>
+                        <p id="meanY" class="stat-value text-lg font-bold text-cyan-400">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">Std Dev</p>
+                        <p id="stdDev" class="stat-value text-lg font-bold text-cyan-400">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Controls & Output -->
+            <div class="col-span-12 lg:col-span-5 space-y-3">
+                
+                <!-- Ripley's K Parameters -->
+                <div class="glass-panel rounded-xl p-4">
+                    <h3 class="text-sm font-bold mb-4 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        Ripley's K Parameters
+                    </h3>
+                    <div class="text-[10px] text-slate-500 mb-3">Spatial point pattern analysis (clustered / regular / random)</div>
+
+                    <!-- Ripley's K parameter settings -->
+                    <div id="ripleyParams" class="space-y-3">
+                        <h4 class="text-xs font-bold text-amber-400">Ripley's K Parameters</h4>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-xs text-slate-300">Maximum Analysis Distance (μm)</label>
+                                <span id="maxDistDisplay" class="param-display text-xs">300</span>
+                            </div>
+                            <input type="range" id="maxDistSlider" min="100" max="500" step="50" value="300" class="w-full" oninput="updateMaxDist(this.value)">
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-xs text-slate-300">Number of Distance Bins</label>
+                                <span id="nDistancesDisplay" class="param-display text-xs">50</span>
+                            </div>
+                            <input type="range" id="nDistancesSlider" min="20" max="100" step="10" value="50" class="w-full" oninput="updateNDistances(this.value)">
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-xs text-slate-300">CSR Simulation Count</label>
+                                <span id="nSimulationsDisplay" class="param-display text-xs">399</span>
+                            </div>
+                            <input type="range" id="nSimulationsSlider" min="99" max="999" step="100" value="399" class="w-full" oninput="updateNSimulations(this.value)">
+                        </div>
+                        
+                        <div class="flex items-center gap-2 pt-2">
+                            <input type="checkbox" id="edgeCorrection" checked class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-amber-500">
+                            <label for="edgeCorrection" class="text-xs text-slate-300">Enable Edge Correction</label>
+                        </div>
+                    </div>
+
+                    <button onclick="generateRipleyAnalysis()" id="generateBtn" class="w-full mt-4 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/25 transition-all">
+                        Spatial Pattern Analysis
+                    </button>
+                </div>
+
+                <!-- Results -->
+                <div class="glass-panel rounded-xl p-4">
+                    <h3 class="text-sm font-bold mb-3">Ripley's K Analysis Results</h3>
+                    
+                    <div id="resultPlaceholder" class="aspect-[4/3] rounded-lg bg-slate-800/50 flex items-center justify-center border border-dashed border-slate-700">
+                        <p class="text-xs text-slate-500">Waiting for analysis...</p>
+                    </div>
+
+                    <div id="ripleyContainer" class="hidden relative space-y-4">
+                        <!-- L-function plot -->
+                        <div class="bg-white rounded-lg p-2">
+                            <canvas id="ripleyLCanvas" class="w-full rounded"></canvas>
+                        </div>
+                        
+                        <!-- Statistical summary -->
+                        <div id="ripleyStats" class="bg-slate-800 rounded-lg p-3 text-xs space-y-2">
+                            <!-- Statistics will be filled dynamically -->
+                        </div>
+                    </div>
+                    
+                    <div id="downloadSection" class="hidden mt-3 space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="downloadResult('heatmap')" class="py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium transition-colors">
+                                Download Plot (PNG)
+                            </button>
+                            <button onclick="downloadResult('data')" class="py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium transition-colors">
+                                Download Data (CSV)
+                            </button>
+                        </div>
+                        <button onclick="exportCOCO()" class="w-full py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            Export COCO JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pixel Scale Settings -->
+                <div class="glass-panel rounded-xl p-4">
+                    <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                        Scale Settings
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between text-xs mb-2">
+                            <span class="text-slate-400">Current Scale:</span>
+                            <span id="currentPixelScale" class="text-pink-400 font-bold">0.675 μm/pixel</span>
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-300 block mb-1">Pixel Scale (μm/pixel)</label>
+                            <input type="number" id="pixelScaleInput" value="0.675" step="0.001" min="0.001" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-sm focus:border-pink-500 focus:outline-none">
+                        </div>
+                        <div class="text-[10px] text-slate-500">
+                            <p>• Default value: 0.675 μm/pixel</p>
+                            <p>• Actual image size: <span id="actualImageSize">1944 × 1382 μm</span></p>
+                        </div>
+                        <button onclick="updatePixelScale()" class="w-full py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition-colors">
+                            Apply Scale
+                        </button>
+                    </div>
+                </div>
+
+                <!-- COCO Import -->
+                <div class="glass-panel rounded-xl p-4">
+                    <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        COCO Annotation Import
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="text-[10px] text-slate-400 mb-2">
+                            Upload a previously exported COCO JSON file to automatically load annotation boxes
+                        </div>
+                        <div class="relative">
+                            <input type="file" id="cocoImportInput" accept=".json" class="hidden" onchange="importCOCO(this)">
+                            <button onclick="document.getElementById('cocoImportInput').click()" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                Import COCO JSON
+                            </button>
+                        </div>
+                        <div id="cocoImportStatus" class="hidden text-xs text-emerald-400 text-center"></div>
+                    </div>
+                </div>
+
+                <!-- COCO Export Settings -->
+                <div class="glass-panel rounded-xl p-4">
+                    <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        COCO Export Settings
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between text-xs mb-2">
+                            <span class="text-slate-400">Annotated Boxes:</span>
+                            <span id="totalBoxCount" class="text-emerald-400 font-bold">0</span>
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-300 block mb-1">Category Name</label>
+                            <input type="text" id="cocoCategoryName" value="stomata" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-sm focus:border-emerald-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-300 block mb-1">Category ID</label>
+                            <input type="number" id="cocoCategoryId" value="1" min="1" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-sm focus:border-emerald-500 focus:outline-none">
+                        </div>
+                        <div class="text-[10px] text-slate-500">
+                            <p>• All annotation boxes will use the same category ID</p>
+                            <p>• COCO format can be used to train Detectron2/MMDetection</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="glass-panel rounded-xl p-3 text-xs text-slate-400 space-y-1">
+                    <p><span class="text-amber-400">•</span> Draw mode: drag to create detection boxes / Shortcut <kbd class="bg-slate-700 px-1 rounded">D</kbd></p>
+                    <p><span class="text-amber-400">•</span> Select mode: move boxes / Shortcut <kbd class="bg-slate-700 px-1 rounded">S</kbd></p>
+                    <p><span class="text-amber-400">•</span> Undo: <kbd class="bg-slate-700 px-1 rounded">Ctrl+Z</kbd> / Delete selected: <kbd class="bg-slate-700 px-1 rounded">Delete</kbd></p>
+                    <p><span class="text-amber-400">•</span> Switch images: <kbd class="bg-slate-700 px-1 rounded">←</kbd> <kbd class="bg-slate-700 px-1 rounded">→</kbd> arrow keys</p>
+                    <p><span class="text-amber-400">•</span> Each image needs at least 5 annotation points to be included in analysis</p>
+                    <p><span class="text-amber-400">•</span> L(d) &gt; 0 clustered / L(d) &lt; 0 regular / L(d) ≈ 0 random</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Global State - Multi-image support
+        let images = []; // Array of image objects: { id, img, filename, width, height, boxes }
+        let currentImageIndex = -1; // Currently selected image index
+        let selectedBox = null;
+        let currentMode = 'draw';
+        let isDrawing = false;
+        let dragStart = null;
+        let currentBox = null;
+        let zoom = 1;
+        let boxIdCounter = 0;
+        let imageIdCounter = 0;
+        
+        // Ripley's K analysis parameters
+        let ripleyConfig = {
+            pixelScale: 0.675,      // μm/pixel
+            maxDistance: 300,       // μm
+            nDistances: 50,         // number of distance bins
+            nSimulations: 399,      // CSR simulation count
+            edgeCorrection: true,
+            alpha: 0.05             // significance level
+        };
+        
+        // Getters for current image
+        function getCurrentImage() {
+            return currentImageIndex >= 0 ? images[currentImageIndex] : null;
+        }
+        function getCurrentBoxes() {
+            const img = getCurrentImage();
+            return img ? img.boxes : [];
+        }
+        function setCurrentBoxes(newBoxes) {
+            const img = getCurrentImage();
+            if (img) img.boxes = newBoxes;
+        }
+        
+        // Canvas setup
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        let annotationLayer = document.getElementById('annotationLayer');
+
+        // File Upload
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (imageFiles.length === 0) return;
+            
+            // Hide upload section, show workspace
+            document.getElementById('uploadSection').classList.add('hidden');
+            document.getElementById('workspace').classList.remove('hidden');
+            
+            // Load all images
+            let loadedCount = 0;
+            imageFiles.forEach((file) => {
+                loadImage(file, () => {
+                    loadedCount++;
+                    if (loadedCount === imageFiles.length && currentImageIndex === -1) {
+                        // Select first image after all loaded
+                        switchToImage(0);
+                    }
+                });
+            });
+        }
+
+        function loadImage(file, onLoadCallback) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    imageIdCounter++;
+                    const imageData = {
+                        id: imageIdCounter,
+                        img: img,
+                        filename: file.name,
+                        width: img.width,
+                        height: img.height,
+                        boxes: []
+                    };
+                    images.push(imageData);
+                    updateImageList();
+                    if (onLoadCallback) onLoadCallback();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function switchToImage(index) {
+            if (index < 0 || index >= images.length) return;
+            
+            // Save current state before switching
+            deselectAll();
+            
+            currentImageIndex = index;
+            const imgData = images[index];
+            
+            // Update canvas size
+            canvas.width = imgData.width;
+            canvas.height = imgData.height;
+            
+            // Update info
+            document.getElementById('imgInfo').textContent = `${imgData.width} × ${imgData.height} px | ${imgData.filename} (${index + 1}/${images.length})`;
+            
+            // Calculate optimal zoom to fit image in container
+            const container = document.getElementById('canvasWrapperOuter');
+            const containerWidth = container.clientWidth - 40; // 40px padding/margin
+            const containerHeight = container.clientHeight - 40;
+            
+            // Calculate scale to fit image in container (with some padding)
+            const scaleX = containerWidth / imgData.width;
+            const scaleY = containerHeight / imgData.height;
+            const optimalZoom = Math.min(scaleX, scaleY, 1); // Don't zoom in beyond 100%
+            
+            // Ensure minimum zoom of 10%
+            zoom = Math.max(0.1, optimalZoom);
+            
+            document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
+            const wrapper = document.getElementById('canvasWrapper');
+            wrapper.style.transform = `scale(${zoom})`;
+            wrapper.style.width = imgData.width + 'px';
+            wrapper.style.height = imgData.height + 'px';
+            
+            // Draw image
+            drawImage();
+            
+            // Setup annotation layer
+            setupAnnotationLayer();
+            
+            // Update actual image size display based on current pixel scale
+            updateActualImageSizeDisplay();
+            
+            // Render boxes for this image
+            renderBoxesForCurrentImage();
+            
+            // Update image list selection
+            updateImageListSelection();
+            
+            // Update stats
+            updateStats();
+            updateBoxCount();
+        }
+
+        function updateImageList() {
+            const container = document.getElementById('imageListContainer');
+            const list = document.getElementById('imageList');
+            if (images.length > 1) container.classList.remove('hidden');
+            list.innerHTML = '';
+            images.forEach((imgData, index) => {
+                const hasBoxes = imgData.boxes.length > 0;
+                const thumb = document.createElement('div');
+                thumb.className = 'image-thumbnail'
+                    + (index === currentImageIndex ? ' active' : '')
+                    + (hasBoxes ? ' thumb-annotated' : '');
+                thumb.title = `${imgData.filename}${hasBoxes ? ` (${imgData.boxes.length} boxes)` : ' (not annotated)'}`;
+                thumb.innerHTML = `<img src="${imgData.img.src}" alt="${imgData.filename}"><span class="img-index">${index + 1}</span>`;
+                thumb.onclick = () => switchToImage(index);
+                list.appendChild(thumb);
+            });
+        }
+
+        function updateImageListSelection() {
+            const thumbs = document.querySelectorAll('.image-thumbnail');
+            thumbs.forEach((thumb, index) => {
+                thumb.classList.toggle('active', index === currentImageIndex);
+            });
+        }
+
+        function renderBoxesForCurrentImage() {
+            annotationLayer.innerHTML = '';
+            const currentBoxes = getCurrentBoxes();
+            currentBoxes.forEach((box, idx) => {
+                const div = document.createElement('div');
+                div.className = 'box-annotation' + (selectedBox && selectedBox.id === box.id ? ' selected' : '');
+                div.id = `box-${box.id}`;
+                div.dataset.boxId = box.id;
+                const imgData = getCurrentImage();
+                div.style.left   = (box.x / imgData.width  * 100) + '%';
+                div.style.top    = (box.y / imgData.height * 100) + '%';
+                div.style.width  = (box.w / imgData.width  * 100) + '%';
+                div.style.height = (box.h / imgData.height * 100) + '%';
+                // Box number label
+                const label = document.createElement('div');
+                label.className = 'box-label';
+                label.textContent = idx + 1;
+                div.appendChild(label);
+                const delBtn = document.createElement('div');
+                delBtn.className = 'delete-btn';
+                delBtn.innerHTML = '×';
+                delBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const boxId = parseInt(div.dataset.boxId);
+                    const box = getCurrentBoxes().find(b => b.id === boxId);
+                    if (box) deleteBox(box);
+                };
+                div.appendChild(delBtn);
+                div.addEventListener('mousedown', (e) => {
+                    if (currentMode === 'select') {
+                        e.preventDefault();
+                        const boxId = parseInt(div.dataset.boxId);
+                        const box = getCurrentBoxes().find(b => b.id === boxId);
+                        if (box) {
+                            selectBox(box);
+                            box.isDragging = true;
+                            box.dragStart = getMousePos(e);
+                            box.originalPos = { x: box.x, y: box.y };
+                        }
+                    }
+                });
+                annotationLayer.appendChild(div);
+                box.element = div;
+            });
+        }
+
+        function addMoreImages() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.multiple = true;
+            input.onchange = (e) => handleFiles(e.target.files);
+            input.click();
+        }
+
+        function drawImage() {
+            const imgData = getCurrentImage();
+            if (!imgData) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(imgData.img, 0, 0);
+        }
+
+        function setupAnnotationLayer() {
+            const imgData = getCurrentImage();
+            if (!imgData) return;
+            
+            // Set annotation layer size to match image
+            annotationLayer.style.width = imgData.width + 'px';
+            annotationLayer.style.height = imgData.height + 'px';
+            annotationLayer.style.pointerEvents = 'auto';
+        }
+        
+        // Setup global event listeners (only once)
+        function setupGlobalEventListeners() {
+            annotationLayer.addEventListener('mousedown', handleMouseDown);
+            annotationLayer.addEventListener('mousemove', handleMouseMove);
+            annotationLayer.addEventListener('mouseup', handleMouseUp);
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'd' || e.key === 'D') setMode('draw');
+                if (e.key === 's' || e.key === 'S') setMode('select');
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    e.preventDefault();
+                    undoLastBox();
+                }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBox) {
+                    deleteBox(selectedBox);
+                }
+                if (e.key === 'ArrowLeft' && images.length > 1) {
+                    e.preventDefault();
+                    switchToImage((currentImageIndex - 1 + images.length) % images.length);
+                }
+                if (e.key === 'ArrowRight' && images.length > 1) {
+                    e.preventDefault();
+                    switchToImage((currentImageIndex + 1) % images.length);
+                }
+            });
+        }
+
+        function getMousePos(e) {
+            const rect = annotationLayer.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        function handleMouseDown(e) {
+            if (e.target.closest('.delete-btn') || e.target.closest('.box-annotation')) return;
+            
+            const pos = getMousePos(e);
+            
+            if (currentMode === 'draw') {
+                isDrawing = true;
+                dragStart = pos;
+                currentBox = createBoxElement(pos.x, pos.y, 0, 0);
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (!isDrawing || !currentBox) return;
+            
+            const pos = getMousePos(e);
+            const w = Math.abs(pos.x - dragStart.x);
+            const h = Math.abs(pos.y - dragStart.y);
+            const bx = Math.min(pos.x, dragStart.x);
+            const by = Math.min(pos.y, dragStart.y);
+            
+            updateBoxElement(currentBox, bx, by, w, h);
+        }
+
+        function handleMouseUp(e) {
+            if (!isDrawing || !currentBox) return;
+            
+            const pos = getMousePos(e);
+            const w = Math.abs(pos.x - dragStart.x);
+            const h = Math.abs(pos.y - dragStart.y);
+            
+            if (w > 5 && h > 5) {
+                currentBox.w = w;
+                currentBox.h = h;
+                currentBox.x = Math.min(pos.x, dragStart.x);
+                currentBox.y = Math.min(pos.y, dragStart.y);
+                const currentBoxes = getCurrentBoxes();
+                currentBoxes.push(currentBox);
+                updateStats();
+                updateBoxCount();
+            } else {
+                if (currentBox.element && currentBox.element.parentNode) {
+                    currentBox.element.remove();
+                }
+            }
+            
+            isDrawing = false;
+            currentBox = null;
+            dragStart = null;
+        }
+
+        function createBoxElement(x, y, w, h) {
+            const imgData = getCurrentImage();
+            if (!imgData) return null;
+            
+            boxIdCounter++;
+            const div = document.createElement('div');
+            div.className = 'box-annotation';
+            div.id = `box-${boxIdCounter}`;
+            div.dataset.boxId = boxIdCounter;
+            
+            const leftPct = (x / imgData.width) * 100;
+            const topPct = (y / imgData.height) * 100;
+            const widthPct = (w / imgData.width) * 100;
+            const heightPct = (h / imgData.height) * 100;
+            
+            div.style.left = leftPct + '%';
+            div.style.top = topPct + '%';
+            div.style.width = widthPct + '%';
+            div.style.height = heightPct + '%';
+
+            // Box number label
+            const label = document.createElement('div');
+            label.className = 'box-label';
+            label.textContent = getCurrentBoxes().length + 1;
+            div.appendChild(label);
+
+            const delBtn = document.createElement('div');
+            delBtn.className = 'delete-btn';
+            delBtn.innerHTML = '×';
+            delBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const boxId = parseInt(div.dataset.boxId);
+                const currentBoxes = getCurrentBoxes();
+                const box = currentBoxes.find(b => b.id === boxId);
+                if (box) deleteBox(box);
+            };
+            div.appendChild(delBtn);
+            
+            div.addEventListener('mousedown', (e) => {
+                if (currentMode === 'select') {
+                    e.preventDefault();
+                    const boxId = parseInt(div.dataset.boxId);
+                    const currentBoxes = getCurrentBoxes();
+                    const box = currentBoxes.find(b => b.id === boxId);
+                    if (box) {
+                        selectBox(box);
+                        box.isDragging = true;
+                        box.dragStart = getMousePos(e);
+                        box.originalPos = { x: box.x, y: box.y };
+                    }
+                }
+            });
+            
+            annotationLayer.appendChild(div);
+            
+            return { 
+                id: boxIdCounter, 
+                x, y, w, h, 
+                element: div,
+                isDragging: false
+            };
+        }
+
+        function updateBoxElement(box, x, y, w, h) {
+            const imgData = getCurrentImage();
+            if (!imgData) return;
+            box.element.style.left = (x / imgData.width * 100) + '%';
+            box.element.style.top = (y / imgData.height * 100) + '%';
+            box.element.style.width = (w / imgData.width * 100) + '%';
+            box.element.style.height = (h / imgData.height * 100) + '%';
+        }
+
+        function selectBox(box) {
+            deselectAll();
+            selectedBox = box;
+            box.element.classList.add('selected');
+        }
+
+        function deselectAll() {
+            const currentBoxes = getCurrentBoxes();
+            currentBoxes.forEach(b => b.element.classList.remove('selected'));
+            selectedBox = null;
+        }
+
+        function deleteBox(box) {
+            if (box.element && box.element.parentNode) {
+                box.element.remove();
+            }
+            const currentBoxes = getCurrentBoxes();
+            const index = currentBoxes.findIndex(b => b.id === box.id);
+            if (index > -1) {
+                currentBoxes.splice(index, 1);
+            }
+            if (selectedBox && selectedBox.id === box.id) selectedBox = null;
+            updateStats();
+            updateBoxCount();
+        }
+
+        function clearAllBoxes() {
+            const currentBoxes = getCurrentBoxes();
+            currentBoxes.forEach(box => {
+                if (box.element && box.element.parentNode) {
+                    box.element.remove();
+                }
+            });
+            setCurrentBoxes([]);
+            selectedBox = null;
+            updateStats();
+            updateBoxCount();
+        }
+
+        function undoLastBox() {
+            const currentBoxes = getCurrentBoxes();
+            if (currentBoxes.length > 0) {
+                deleteBox(currentBoxes[currentBoxes.length - 1]);
+            }
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('drawModeBtn').classList.toggle('active', mode === 'draw');
+            document.getElementById('selectModeBtn').classList.toggle('active', mode === 'select');
+            annotationLayer.style.cursor = mode === 'draw' ? 'crosshair' : 'default';
+        }
+
+        function zoomImage(factor) {
+            zoom *= factor;
+            zoom = Math.max(0.1, Math.min(5, zoom)); // Allow 10%-500% zoom
+            document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
+            
+            // Apply zoom to the inner wrapper only
+            const wrapper = document.getElementById('canvasWrapper');
+            wrapper.style.transform = `scale(${zoom})`;
+        }
+
+        function updateBoxCount() {
+            const currentBoxes = getCurrentBoxes();
+            document.getElementById('boxCount').textContent = currentBoxes.length;
+            
+            // Update total box count for COCO export
+            const totalBoxes = images.reduce((sum, img) => sum + img.boxes.length, 0);
+            const totalBoxCountEl = document.getElementById('totalBoxCount');
+            if (totalBoxCountEl) {
+                totalBoxCountEl.textContent = totalBoxes;
+            }
+        }
+
+        function updateStats() {
+            const currentBoxes = getCurrentBoxes();
+            if (currentBoxes.length === 0) {
+                document.getElementById('meanX').textContent = '-';
+                document.getElementById('meanY').textContent = '-';
+                document.getElementById('stdDev').textContent = '-';
+                return;
+            }
+            
+            const centers = currentBoxes.map(b => ({
+                x: b.x + b.w / 2,
+                y: b.y + b.h / 2
+            }));
+            
+            const meanX = centers.reduce((a, b) => a + b.x, 0) / centers.length;
+            const meanY = centers.reduce((a, b) => a + b.y, 0) / centers.length;
+            
+            const variance = centers.reduce((acc, c) => {
+                return acc + Math.pow(c.x - meanX, 2) + Math.pow(c.y - meanY, 2);
+            }, 0) / centers.length;
+            
+            document.getElementById('meanX').textContent = meanX.toFixed(1);
+            document.getElementById('meanY').textContent = meanY.toFixed(1);
+            document.getElementById('stdDev').textContent = Math.sqrt(variance).toFixed(1);
+        }
+
+        // Ripley's K parameter update functions
+        function updateMaxDist(val) {
+            ripleyConfig.maxDistance = parseInt(val);
+            document.getElementById('maxDistDisplay').textContent = val;
+        }
+        
+        function updateNDistances(val) {
+            ripleyConfig.nDistances = parseInt(val);
+            document.getElementById('nDistancesDisplay').textContent = val;
+        }
+        
+        function updateNSimulations(val) {
+            ripleyConfig.nSimulations = parseInt(val);
+            document.getElementById('nSimulationsDisplay').textContent = val;
+        }
+        
+        // Update pixel scale and recalculate actual image size
+        function updatePixelScale() {
+            const input = document.getElementById('pixelScaleInput');
+            const newScale = parseFloat(input.value);
+            
+            if (isNaN(newScale) || newScale <= 0) {
+                alert('Please enter a valid scale value (greater than 0)');
+                return;
+            }
+            
+            // Update config
+            ripleyConfig.pixelScale = newScale;
+            
+            // Update display
+            document.getElementById('currentPixelScale').textContent = newScale.toFixed(3) + ' μm/pixel';
+            
+            // Calculate and display actual image size
+            if (images.length > 0) {
+                const refImg = images[0];
+                const widthUm = (refImg.width * newScale).toFixed(0);
+                const heightUm = (refImg.height * newScale).toFixed(0);
+                document.getElementById('actualImageSize').textContent = `${widthUm} × ${heightUm} μm`;
+            } else {
+                document.getElementById('actualImageSize').textContent = 'Displayed after image is loaded';
+            }
+            
+            // Show success message
+            const btn = document.querySelector('button[onclick="updatePixelScale()"]');
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Applied';
+            btn.classList.remove('bg-pink-600', 'hover:bg-pink-500');
+            btn.classList.add('bg-green-600');
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.classList.add('bg-pink-600', 'hover:bg-pink-500');
+                btn.classList.remove('bg-green-600');
+            }, 1500);
+            
+            console.log('Pixel scale updated to:', newScale, 'μm/pixel');
+        }
+        
+        // Update actual image size display when images are loaded
+        function updateActualImageSizeDisplay() {
+            if (images.length > 0) {
+                const refImg = images[0];
+                const widthUm = (refImg.width * ripleyConfig.pixelScale).toFixed(0);
+                const heightUm = (refImg.height * ripleyConfig.pixelScale).toFixed(0);
+                document.getElementById('actualImageSize').textContent = `${widthUm} × ${heightUm} μm`;
+            }
+        }
+        
+        // Global variable to store per-image statistics
+        let lastRipleyResults = null;
+
+        // ==================== Ripley's K Analysis ====================
+        
+        // Calculate Euclidean distance between two points
+        function distance(p1, p2) {
+            return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+        }
+
+        // Precompute all pairwise distances for a point set (O(n²) once)
+        function computeDistanceMatrix(points) {
+            const n = points.length;
+            const dists = new Float64Array(n * n);
+            for (let i = 0; i < n; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    const d = Math.sqrt(
+                        (points[i].x - points[j].x) ** 2 +
+                        (points[i].y - points[j].y) ** 2
+                    );
+                    dists[i * n + j] = d;
+                    dists[j * n + i] = d;
+                }
+            }
+            return dists;
+        }
+
+        // Edge correction: Ripley's isotropic correction
+        // Returns the proportion of circumference of radius d centered at point that lies inside bounds
+        function calculateEdgeWeight(point, d, bounds) {
+            if (d <= 0) return 1.0;
+            const { xmin, xmax, ymin, ymax } = bounds;
+            
+            // Distances from point to each boundary
+            const dl = point.x - xmin;
+            const dr = xmax - point.x;
+            const db = point.y - ymin;
+            const dt = ymax - point.y;
+
+            // Total angle outside bounds (as fraction of 2π)
+            let outsideFraction = 0;
+            // For each boundary closer than d, compute the arc angle outside
+            if (dl < d) outsideFraction += Math.acos(Math.min(1, dl / d)) / Math.PI;
+            if (dr < d) outsideFraction += Math.acos(Math.min(1, dr / d)) / Math.PI;
+            if (db < d) outsideFraction += Math.acos(Math.min(1, db / d)) / Math.PI;
+            if (dt < d) outsideFraction += Math.acos(Math.min(1, dt / d)) / Math.PI;
+
+            // Clamp: weight can't exceed 4 (full outside) or be less than 0.1
+            const weight = Math.max(0.1, 1 - Math.min(1, outsideFraction / 2));
+            return weight;
+        }
+        
+        // Calculate Ripley's K function using pre-computed distance matrix
+        function ripleyKFunction(points, distMatrix, maxD, nDistances, area, bounds, useEdgeCorrection) {
+            const n = points.length;
+            if (n < 5) return null;
+            
+            const distances = [];
+            for (let i = 0; i <= nDistances; i++) {
+                distances.push((i / nDistances) * maxD);
+            }
+            
+            // Precompute edge weights per point per distance if needed
+            // (cache by point index and distance index)
+            const Kvalues = [];
+            
+            for (const d of distances) {
+                let count = 0;
+                
+                if (useEdgeCorrection) {
+                    for (let i = 0; i < n; i++) {
+                        const w = calculateEdgeWeight(points[i], d, bounds);
+                        for (let j = 0; j < n; j++) {
+                            if (i !== j && distMatrix[i * n + j] <= d) {
+                                count += 1 / w;
+                            }
+                        }
+                    }
+                } else {
+                    for (let i = 0; i < n; i++) {
+                        for (let j = 0; j < n; j++) {
+                            if (i !== j && distMatrix[i * n + j] <= d) {
+                                count++;
+                            }
+                        }
+                    }
+                }
+                
+                const Kd = (area / (n * (n - 1))) * count;
+                Kvalues.push(Kd);
+            }
+            
+            return { distances, Kvalues };
+        }
+        
+        // Convert K to L function: L(d) = sqrt(K(d)/π) - d
+        function kToLFunction(distances, Kvalues) {
+            return Kvalues.map((K, i) => {
+                const d = distances[i];
+                return Math.sqrt(Math.max(0, K) / Math.PI) - d;
+            });
+        }
+        
+        // Generate CSR (Complete Spatial Randomness) simulations
+        function simulateCSR(nPoints, bounds, nSimulations) {
+            const { xmin, xmax, ymin, ymax } = bounds;
+            const simulations = [];
+            
+            for (let s = 0; s < nSimulations; s++) {
+                const points = [];
+                for (let i = 0; i < nPoints; i++) {
+                    points.push({
+                        x: xmin + Math.random() * (xmax - xmin),
+                        y: ymin + Math.random() * (ymax - ymin)
+                    });
+                }
+                simulations.push(points);
+            }
+            
+            return simulations;
+        }
+        
+        // Calculate mean of array
+        function mean(arr) {
+            return arr.reduce((a, b) => a + b, 0) / arr.length;
+        }
+        
+        // Calculate standard deviation of array
+        function stdDev(arr) {
+            const m = mean(arr);
+            return Math.sqrt(arr.reduce((sq, n) => sq + (n - m) ** 2, 0) / arr.length);
+        }
+        
+        // Get percentile from a PRE-SORTED array (avoids repeated sorting)
+        function percentileSorted(sorted, p) {
+            const index = (p / 100) * (sorted.length - 1);
+            const lower = Math.floor(index);
+            const upper = Math.ceil(index);
+            const weight = index - lower;
+            return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+        }
+        
+        // Main Ripley's K Analysis function
+        async function generateRipleyAnalysis() {
+            const imagesWithBoxes = images.filter(img => img.boxes.length > 0);
+            if (imagesWithBoxes.length === 0) {
+                alert('Please annotate at least one region');
+                return;
+            }
+            
+            const btn = document.getElementById('generateBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Analyzing (0%)...';
+            btn.disabled = true;
+            
+            await new Promise(resolve => setTimeout(resolve, 10));
+            
+            try {
+                // Step 1: Convert boxes to μm points for each image
+                const imageDataList = imagesWithBoxes.map(img => {
+                    const points = img.boxes.map(box => ({
+                        x: (box.x + box.w / 2) * ripleyConfig.pixelScale,
+                        y: (box.y + box.h / 2) * ripleyConfig.pixelScale
+                    }));
+                    return {
+                        points,
+                        area: (img.width * ripleyConfig.pixelScale) * (img.height * ripleyConfig.pixelScale),
+                        bounds: {
+                            xmin: 0,
+                            xmax: img.width * ripleyConfig.pixelScale,
+                            ymin: 0,
+                            ymax: img.height * ripleyConfig.pixelScale
+                        },
+                        n: points.length,
+                        filename: img.filename
+                    };
+                });
+                
+                // Step 2: Calculate K and L for each image using pre-computed distance matrix
+                const Lcurves = [];
+                const validData = [];
+                let sharedDistances = null;
+                
+                for (let i = 0; i < imageDataList.length; i++) {
+                    const data = imageDataList[i];
+                    if (data.n < 5) continue;
+                    
+                    // Precompute pairwise distances once per image (O(n²))
+                    const distMatrix = computeDistanceMatrix(data.points);
+                    
+                    const result = ripleyKFunction(
+                        data.points, distMatrix,
+                        ripleyConfig.maxDistance,
+                        ripleyConfig.nDistances,
+                        data.area, data.bounds,
+                        ripleyConfig.edgeCorrection
+                    );
+                    
+                    if (result) {
+                        const L = kToLFunction(result.distances, result.Kvalues);
+                        Lcurves.push(L);
+                        validData.push({ ...data, distMatrix });
+                        if (!sharedDistances) sharedDistances = result.distances;
+                    }
+                    
+                    btn.textContent = `Analyzing (${Math.round((i + 1) / imageDataList.length * 25)}%)...`;
+                    await new Promise(r => setTimeout(r, 0));
+                }
+                
+                if (validData.length < 1) {
+                    alert('Not enough valid samples (each image needs at least 5 annotation points)');
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    return;
+                }
+                
+                // Step 3: Calculate mean L curve across images
+                const nDist = sharedDistances.length;
+                const Lmean = [];
+                const Llower = [];
+                const Lupper = [];
+                
+                for (let i = 0; i < nDist; i++) {
+                    const valuesAtI = Lcurves.map(L => L[i]);
+                    Lmean.push(mean(valuesAtI));
+                    // Sort once per distance index for percentiles
+                    const sorted = [...valuesAtI].sort((a, b) => a - b);
+                    Llower.push(percentileSorted(sorted, 2.5));
+                    Lupper.push(percentileSorted(sorted, 97.5));
+                }
+                
+                btn.textContent = 'Analyzing (30%)...';
+                await new Promise(r => setTimeout(r, 0));
+                
+                // Step 4: CSR simulations
+                const meanN = Math.round(mean(validData.map(d => d.n)));
+                const meanArea = mean(validData.map(d => d.area));
+                const meanBounds = {
+                    xmin: mean(validData.map(d => d.bounds.xmin)),
+                    xmax: mean(validData.map(d => d.bounds.xmax)),
+                    ymin: mean(validData.map(d => d.bounds.ymin)),
+                    ymax: mean(validData.map(d => d.bounds.ymax))
+                };
+                
+                // Pre-generate all CSR point sets
+                const csrSimulations = simulateCSR(meanN, meanBounds, ripleyConfig.nSimulations);
+                
+                // Compute L for each simulation - reuse distMatrix approach
+                // Store transposed: Lsim_transposed[distIdx][simIdx] for efficient percentile
+                const LsimTransposed = Array.from({ length: nDist }, () => []);
+                
+                for (let s = 0; s < csrSimulations.length; s++) {
+                    const simPoints = csrSimulations[s];
+                    const simDistMatrix = computeDistanceMatrix(simPoints);
+                    const simResult = ripleyKFunction(
+                        simPoints, simDistMatrix,
+                        ripleyConfig.maxDistance,
+                        ripleyConfig.nDistances,
+                        meanArea, meanBounds,
+                        ripleyConfig.edgeCorrection
+                    );
+                    
+                    if (simResult) {
+                        const Lsim = kToLFunction(simResult.distances, simResult.Kvalues);
+                        for (let di = 0; di < nDist; di++) {
+                            LsimTransposed[di].push(Lsim[di]);
+                        }
+                    }
+                    
+                    if (s % 20 === 0) {
+                        btn.textContent = `Analyzing (${Math.round(30 + (s / csrSimulations.length) * 55)}%)...`;
+                        await new Promise(r => setTimeout(r, 0));
+                    }
+                }
+                
+                // Step 5: CSR confidence envelope - sort each distance's sim values ONCE
+                const LcsrLower = [];
+                const LcsrUpper = [];
+                for (let di = 0; di < nDist; di++) {
+                    const sortedSims = LsimTransposed[di].sort((a, b) => a - b);
+                    LcsrLower.push(percentileSorted(sortedSims, 2.5));
+                    LcsrUpper.push(percentileSorted(sortedSims, 97.5));
+                }
+                
+                btn.textContent = 'Analyzing (88%)...';
+                await new Promise(r => setTimeout(r, 0));
+                
+                // Step 6: Pattern detection
+                const significantRegular = Lmean.map((L, i) => L < LcsrLower[i]);
+                const significantCluster = Lmean.map((L, i) => L > LcsrUpper[i]);
+                const notSignificant = significantRegular.map((v, i) => !v && !significantCluster[i]);
+                
+                // Calculate pattern ranges
+                const regIndices = significantRegular.map((v, i) => v ? i : -1).filter(i => i >= 0);
+                const cluIndices = significantCluster.map((v, i) => v ? i : -1).filter(i => i >= 0);
+                
+                const regRange = regIndices.length > 0
+                    ? `${sharedDistances[regIndices[0]].toFixed(0)}-${sharedDistances[regIndices[regIndices.length - 1]].toFixed(0)} μm`
+                    : 'none';
+                const cluRange = cluIndices.length > 0
+                    ? `${sharedDistances[cluIndices[0]].toFixed(0)}-${sharedDistances[cluIndices[cluIndices.length - 1]].toFixed(0)} μm`
+                    : 'none';
+                
+                // Step 7: MNND using pre-computed distance matrices
+                const mnndList = [];
+                for (const data of validData) {
+                    if (data.n > 1) {
+                        const n = data.n;
+                        let totalMinDist = 0;
+                        for (let i = 0; i < n; i++) {
+                            let minDist = Infinity;
+                            for (let j = 0; j < n; j++) {
+                                if (i !== j) {
+                                    const d = data.distMatrix[i * n + j];
+                                    if (d < minDist) minDist = d;
+                                }
+                            }
+                            totalMinDist += minDist;
+                        }
+                        mnndList.push(totalMinDist / n);
+                    }
+                }
+                
+                const mnndMean = mnndList.length > 0 ? mean(mnndList) : NaN;
+                const mnndStd  = mnndList.length > 0 ? stdDev(mnndList) : NaN;
+                
+                // Calculate densities
+                const densities = validData.map(d => d.n / (d.area / 1e6));
+                const densityMean = mean(densities);
+                const densityStd  = stdDev(densities);
+                
+                // Store results (strip distMatrix to save memory)
+                lastRipleyResults = {
+                    distances: sharedDistances,
+                    Lmean, Llower, Lupper,
+                    LcsrLower, LcsrUpper,
+                    Lcurves,
+                    significantRegular, significantCluster, notSignificant,
+                    regRange, cluRange,
+                    mnndMean, mnndStd,
+                    densityMean, densityStd,
+                    nSamples: validData.length,
+                    validData: validData.map(d => ({ ...d, distMatrix: null }))
+                };
+                
+                renderRipleyResults();
+                
+                document.getElementById('resultPlaceholder').classList.add('hidden');
+                document.getElementById('ripleyContainer').classList.remove('hidden');
+                document.getElementById('downloadSection').classList.remove('hidden');
+                
+                btn.textContent = originalText;
+                btn.disabled = false;
+                
+            } catch (e) {
+                console.error('Ripley analysis failed:', e);
+                alert('Analysis failed: ' + e.message);
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Render Ripley's K analysis results
+        function renderRipleyResults() {
+            if (!lastRipleyResults) return;
+            
+            const res = lastRipleyResults;
+            const canvas = document.getElementById('ripleyLCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            const width = 580;
+            const height = 350;
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Clear canvas
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Margins
+            const margin = { top: 40, right: 40, bottom: 60, left: 70 };
+            const plotW = width - margin.left - margin.right;
+            const plotH = height - margin.top - margin.bottom;
+            
+            // Find data ranges
+            const allL = [...res.Lmean, ...res.Llower, ...res.Lupper, 
+                          ...res.LcsrLower, ...res.LcsrUpper];
+            const minL = Math.min(...allL) * 1.1;
+            const maxL = Math.max(...allL) * 1.1;
+            
+            // Helper to map data to pixels
+            const xScale = (d) => margin.left + (d / Math.max(...res.distances)) * plotW;
+            const yScale = (L) => margin.top + plotH - ((L - minL) / (maxL - minL)) * plotH;
+            
+            // Draw grid
+            ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 0; i <= 5; i++) {
+                const x = margin.left + (i / 5) * plotW;
+                ctx.moveTo(x, margin.top);
+                ctx.lineTo(x, margin.top + plotH);
+            }
+            for (let i = 0; i <= 5; i++) {
+                const y = margin.top + (i / 5) * plotH;
+                ctx.moveTo(margin.left, y);
+                ctx.lineTo(margin.left + plotW, y);
+            }
+            ctx.stroke();
+            
+            // Draw zero line
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            const y0 = yScale(0);
+            ctx.moveTo(margin.left, y0);
+            ctx.lineTo(margin.left + plotW, y0);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw CSR confidence envelope
+            ctx.fillStyle = 'rgba(128, 128, 128, 0.15)';
+            ctx.beginPath();
+            ctx.moveTo(xScale(res.distances[0]), yScale(res.LcsrLower[0]));
+            for (let i = 1; i < res.distances.length; i++) {
+                ctx.lineTo(xScale(res.distances[i]), yScale(res.LcsrLower[i]));
+            }
+            for (let i = res.distances.length - 1; i >= 0; i--) {
+                ctx.lineTo(xScale(res.distances[i]), yScale(res.LcsrUpper[i]));
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // Draw CSR envelope lines
+            ctx.strokeStyle = 'gray';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            for (let i = 0; i < res.distances.length; i++) {
+                if (i === 0) ctx.moveTo(xScale(res.distances[i]), yScale(res.LcsrUpper[i]));
+                else ctx.lineTo(xScale(res.distances[i]), yScale(res.LcsrUpper[i]));
+            }
+            ctx.stroke();
+            
+            ctx.beginPath();
+            for (let i = 0; i < res.distances.length; i++) {
+                if (i === 0) ctx.moveTo(xScale(res.distances[i]), yScale(res.LcsrLower[i]));
+                else ctx.lineTo(xScale(res.distances[i]), yScale(res.LcsrLower[i]));
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw mean L curve
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            for (let i = 0; i < res.distances.length; i++) {
+                if (i === 0) ctx.moveTo(xScale(res.distances[i]), yScale(res.Lmean[i]));
+                else ctx.lineTo(xScale(res.distances[i]), yScale(res.Lmean[i]));
+            }
+            ctx.stroke();
+            
+            // Draw significant points
+            for (let i = 0; i < res.distances.length; i++) {
+                const x = xScale(res.distances[i]);
+                const y = yScale(res.Lmean[i]);
+                
+                if (res.significantRegular[i]) {
+                    // Blue for regular
+                    ctx.fillStyle = 'blue';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                } else if (res.significantCluster[i]) {
+                    // Red for cluster
+                    ctx.fillStyle = 'red';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+            
+            // Draw axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(margin.left, margin.top);
+            ctx.lineTo(margin.left, margin.top + plotH);
+            ctx.lineTo(margin.left + plotW, margin.top + plotH);
+            ctx.stroke();
+            
+            // X axis labels
+            ctx.fillStyle = '#333';
+            ctx.font = '11px "JetBrains Mono", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            for (let i = 0; i <= 5; i++) {
+                const d = (i / 5) * Math.max(...res.distances);
+                const x = margin.left + (i / 5) * plotW;
+                ctx.fillText(d.toFixed(0), x, margin.top + plotH + 8);
+            }
+            ctx.font = 'bold 12px "JetBrains Mono", sans-serif';
+            ctx.fillText('Distance d (μm)', margin.left + plotW / 2, margin.top + plotH + 25);
+            
+            // Y axis labels
+            ctx.font = '11px "JetBrains Mono", sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let i = 0; i <= 5; i++) {
+                const L = minL + (i / 5) * (maxL - minL);
+                const y = margin.top + plotH - (i / 5) * plotH;
+                ctx.fillText(L.toFixed(1), margin.left - 8, y);
+            }
+            ctx.save();
+            ctx.translate(20, margin.top + plotH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 12px "JetBrains Mono", sans-serif';
+            ctx.fillText('L(d)', 0, 0);
+            ctx.restore();
+            
+            // Title
+            ctx.font = 'bold 14px "JetBrains Mono", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Ripley's L Function (n=${res.nSamples} images)`, width / 2, 20);
+            
+            // Legend
+            const legendX = margin.left + 10;
+            const legendY = margin.top + 10;
+            
+            // Red line - Mean L(d)
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(legendX, legendY);
+            ctx.lineTo(legendX + 25, legendY);
+            ctx.stroke();
+            ctx.fillStyle = '#333';
+            ctx.font = '10px "JetBrains Mono", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Mean L(d)', legendX + 30, legendY);
+            
+            // Gray dashed - CSR envelope
+            ctx.strokeStyle = 'gray';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(legendX, legendY + 15);
+            ctx.lineTo(legendX + 25, legendY + 15);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillText('CSR 95% Envelope', legendX + 30, legendY + 15);
+            
+            // Update stats display
+            const statsDiv = document.getElementById('ripleyStats');
+            const nReg = res.significantRegular.filter(v => v).length;
+            const nClu = res.significantCluster.filter(v => v).length;
+            const nRnd = res.notSignificant.filter(v => v).length;
+            
+            statsDiv.innerHTML = `
+                <div class="font-bold text-amber-400 mb-2">Spatial Pattern Analysis Results</div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>Sample count: <span class="text-cyan-400">${res.nSamples}</span></div>
+                    <div>Mean density: <span class="text-cyan-400">${res.densityMean.toFixed(1)} ± ${res.densityStd.toFixed(1)}</span> /mm²</div>
+                    <div>MNND: <span class="text-cyan-400">${res.mnndMean.toFixed(1)} ± ${res.mnndStd.toFixed(1)}</span> μm</div>
+                </div>
+                <div class="mt-2 pt-2 border-t border-slate-600">
+                    <div class="text-xs text-slate-400 mb-1">Spatial pattern:</div>
+                    <div class="flex gap-3">
+                        <span class="text-blue-400">● Regular: ${res.regRange}</span>
+                        <span class="text-red-400">● Clustered: ${res.cluRange}</span>
+                        <span class="text-green-400">■ Random: ${nRnd} pts</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Import COCO JSON annotations
+        function importCOCO(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            if (images.length === 0) {
+                alert('Please upload images before importing annotations');
+                input.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const cocoData = JSON.parse(e.target.result);
+                    
+                    // Validate COCO format
+                    if (!cocoData.images || !cocoData.annotations) {
+                        alert('Invalid COCO format: missing images or annotations fields');
+                        return;
+                    }
+                    
+                    // Create mapping from image_id to image data
+                    const imageIdToBoxes = new Map();
+                    
+                    // Initialize empty box arrays for each image
+                    images.forEach(img => {
+                        img.boxes = []; // Clear existing boxes
+                    });
+                    
+                    // Extract categories info
+                    const categories = cocoData.categories || [];
+                    const categoryInfo = categories.map(c => `${c.name}(ID:${c.id})`).join(', ');
+                    
+                    // Build image filename to ID mapping from COCO
+                    const cocoImageMap = new Map();
+                    cocoData.images.forEach(img => {
+                        cocoImageMap.set(img.file_name, img);
+                        // Also add without path
+                        const baseName = img.file_name.split('/').pop();
+                        cocoImageMap.set(baseName, img);
+                    });
+                    
+                    // Process annotations
+                    let importedCount = 0;
+                    let matchedCount = 0;
+                    const categoryCount = new Map();
+                    
+                    cocoData.annotations.forEach(ann => {
+                        importedCount++;
+                        
+                        // Find corresponding image in COCO data
+                        const cocoImage = cocoData.images.find(img => img.id === ann.image_id);
+                        if (!cocoImage) return;
+                        
+                        // Try multiple matching strategies
+                        let targetImage = null;
+                        
+                        // Strategy 1: Exact filename match
+                        targetImage = images.find(img => img.filename === cocoImage.file_name);
+                        
+                        // Strategy 2: Match basename only
+                        if (!targetImage) {
+                            const cocoBaseName = cocoImage.file_name.split('/').pop();
+                            targetImage = images.find(img => {
+                                const imgBaseName = img.filename.split('/').pop();
+                                return imgBaseName === cocoBaseName;
+                            });
+                        }
+                        
+                        // Strategy 3: One is substring of the other
+                        if (!targetImage) {
+                            targetImage = images.find(img => 
+                                img.filename.includes(cocoImage.file_name) || 
+                                cocoImage.file_name.includes(img.filename)
+                            );
+                        }
+                        
+                        if (!targetImage) return;
+                        matchedCount++;
+                        
+                        // Track category usage
+                        const catId = ann.category_id || 1;
+                        categoryCount.set(catId, (categoryCount.get(catId) || 0) + 1);
+                        
+                        // Extract bbox [x, y, width, height]
+                        const bbox = ann.bbox;
+                        if (!bbox || bbox.length !== 4) return;
+                        
+                        boxIdCounter++;
+                        const box = {
+                            id: boxIdCounter,
+                            x: bbox[0],
+                            y: bbox[1],
+                            w: bbox[2],
+                            h: bbox[3],
+                            element: null,
+                            isDragging: false,
+                            categoryId: catId
+                        };
+                        
+                        targetImage.boxes.push(box);
+                    });
+                    
+                    // Update UI
+                    if (currentImageIndex >= 0) {
+                        renderBoxesForCurrentImage();
+                        updateStats();
+                        updateBoxCount();
+                    }
+                    
+                    // Build category summary
+                    let catSummary = '';
+                    if (categoryCount.size > 0) {
+                        const catParts = [];
+                        categoryCount.forEach((count, catId) => {
+                            const cat = categories.find(c => c.id === catId);
+                            const catName = cat ? cat.name : `ID:${catId}`;
+                            catParts.push(`${catName}: ${count}`);
+                        });
+                        catSummary = '\nCategory: ' + catParts.join(', ');
+                    }
+                    
+                    // Show status
+                    const statusEl = document.getElementById('cocoImportStatus');
+                    statusEl.classList.remove('hidden');
+                    statusEl.innerHTML = `Import successful: ${matchedCount}/${importedCount} annotation boxes${catSummary.replace(/\n/g, '<br>')}`;
+                    statusEl.className = 'text-xs text-emerald-400 text-center mt-2 space-y-1';
+                    
+                    // Auto-hide status after 5 seconds
+                    setTimeout(() => {
+                        statusEl.classList.add('hidden');
+                    }, 5000);
+                    
+                    console.log(`COCO import: ${matchedCount}/${importedCount} annotation boxes matched to images${catSummary}`);
+                    
+                } catch (err) {
+                    console.error('COCO import failed:', err);
+                    alert('Import failed: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            input.value = ''; // Reset input
+        }
+
+        // Export annotations in COCO format
+        function exportCOCO() {
+            if (images.length === 0) {
+                alert('Please upload images first');
+                return;
+            }
+            
+            // Check if any boxes are annotated
+            const totalBoxes = images.reduce((sum, img) => sum + img.boxes.length, 0);
+            if (totalBoxes === 0) {
+                alert('Please annotate at least one region');
+                return;
+            }
+            
+            // Get category settings
+            const categoryName = document.getElementById('cocoCategoryName').value || 'object';
+            const categoryId = parseInt(document.getElementById('cocoCategoryId').value) || 1;
+            
+            // Build COCO format
+            const cocoData = {
+                info: {
+                    description: "Annotated Dataset",
+                    version: "1.0",
+                    year: new Date().getFullYear(),
+                    contributor: "Phenoharvest Annotator",
+                    date_created: new Date().toISOString()
+                },
+                licenses: [
+                    {
+                        id: 1,
+                        name: "Unknown",
+                        url: ""
+                    }
+                ],
+                images: [],
+                annotations: [],
+                categories: [
+                    {
+                        id: categoryId,
+                        name: categoryName,
+                        supercategory: "none"
+                    }
+                ]
+            };
+            
+            let annotationId = 1;
+            
+            images.forEach((img, imgIdx) => {
+                // Add image info
+                cocoData.images.push({
+                    id: imgIdx + 1,
+                    file_name: img.filename,
+                    width: img.width,
+                    height: img.height,
+                    date_captured: new Date().toISOString(),
+                    license: 1
+                });
+                
+                // Add annotations for this image
+                img.boxes.forEach(box => {
+                    // COCO format: [x, y, width, height] in pixels
+                    const bbox = [
+                        Math.round(box.x),
+                        Math.round(box.y),
+                        Math.round(box.w),
+                        Math.round(box.h)
+                    ];
+                    
+                    // Calculate area
+                    const area = box.w * box.h;
+                    
+                    cocoData.annotations.push({
+                        id: annotationId++,
+                        image_id: imgIdx + 1,
+                        category_id: categoryId,
+                        bbox: bbox,
+                        area: Math.round(area),
+                        iscrowd: 0,
+                        segmentation: [],  // Empty for bbox-only annotations
+                        attributes: {
+                            box_id: box.id
+                        }
+                    });
+                });
+            });
+            
+            // Create and download JSON file
+            const jsonStr = JSON.stringify(cocoData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.download = 'annotations_coco.json';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            
+            // Show success message with stats
+            alert(`COCO export successful!\n\nStatistics:\n- Image count: ${images.length}\n- Annotation box count: ${totalBoxes}\n- Category: ${categoryName} (ID: ${categoryId})`);
+        }
+
+        function downloadResult(type) {
+            if (type === 'heatmap') {
+                // Download Ripley's K analysis chart
+                const canvas = document.getElementById('ripleyLCanvas');
+                if (canvas) {
+                    const link = document.createElement('a');
+                    link.download = 'ripley_analysis.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                }
+            } else if (type === 'data') {
+                let csv = '';
+                
+                // Section 1: Box coordinates
+                csv += '# Section 1: Box Coordinates\n';
+                csv += 'Image,Box_ID,Center_X,Center_Y,Width,Height\n';
+                let globalId = 0;
+                images.forEach((img, imgIdx) => {
+                    img.boxes.forEach((b) => {
+                        globalId++;
+                        csv += `${imgIdx + 1},${globalId},${(b.x+b.w/2).toFixed(2)},${(b.y+b.h/2).toFixed(2)},${b.w.toFixed(2)},${b.h.toFixed(2)}\n`;
+                    });
+                });
+                
+                // Section 2: Ripley's K Analysis Results
+                if (lastRipleyResults) {
+                    csv += '\n# Section 2: Ripley\'s K Analysis Results\n';
+                    csv += `Analysis_Parameters\n`;
+                    csv += `Max_Distance_um,${ripleyConfig.maxDistance}\n`;
+                    csv += `N_Distances,${ripleyConfig.nDistances}\n`;
+                    csv += `N_Simulations,${ripleyConfig.nSimulations}\n`;
+                    csv += `Edge_Correction,${ripleyConfig.edgeCorrection}\n`;
+                    csv += `Pixel_Scale,${ripleyConfig.pixelScale}\n`;
+                    csv += `\n`;
+                    
+                    // Spatial pattern summary
+                    csv += `Spatial_Pattern_Summary\n`;
+                    csv += `Pattern_Type,Range\n`;
+                    csv += `Regular,${lastRipleyResults.regRange}\n`;
+                    csv += `Cluster,${lastRipleyResults.cluRange}\n`;
+                    csv += `\n`;
+                    
+                    // Statistics
+                    csv += `Statistics\n`;
+                    csv += `Metric,Mean,Std\n`;
+                    csv += `Density_per_mm2,${lastRipleyResults.densityMean.toFixed(2)},${lastRipleyResults.densityStd.toFixed(2)}\n`;
+                    csv += `MNND_um,${lastRipleyResults.mnndMean.toFixed(2)},${lastRipleyResults.mnndStd.toFixed(2)}\n`;
+                    csv += `N_Samples,${lastRipleyResults.nSamples}\n`;
+                    csv += `\n`;
+                    
+                    // L function values
+                    csv += `L_Function_Values\n`;
+                    csv += 'Distance_um,L_Mean,L_CSR_Lower,L_CSR_Upper,Is_Regular,Is_Cluster\n';
+                    for (let i = 0; i < lastRipleyResults.distances.length; i++) {
+                        const d = lastRipleyResults.distances[i].toFixed(1);
+                        const L = lastRipleyResults.Lmean[i].toFixed(4);
+                        const lower = lastRipleyResults.LcsrLower[i].toFixed(4);
+                        const upper = lastRipleyResults.LcsrUpper[i].toFixed(4);
+                        const isReg = lastRipleyResults.significantRegular[i] ? 'Yes' : 'No';
+                        const isClu = lastRipleyResults.significantCluster[i] ? 'Yes' : 'No';
+                        csv += `${d},${L},${lower},${upper},${isReg},${isClu}\n`;
+                    }
+                } else {
+                    csv += '\n# Section 2: Ripley\'s K Analysis\n';
+                    csv += '# Note: Run Ripley\'s K analysis to get spatial pattern results\n';
+                }
+                
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const link = document.createElement('a');
+                link.download = 'ripley_analysis.csv';
+                link.href = URL.createObjectURL(blob);
+                link.click();
+            }
+        }
+
+        function resetAll() {
+            const totalBoxes = images.reduce((sum, img) => sum + img.boxes.length, 0);
+            if (totalBoxes > 0) {
+                if (!confirm(`There are currently ${images.length} images and ${totalBoxes} annotation boxes. Resetting will remove everything. Confirm reset?`)) return;
+            }
+            location.reload();
+        }
+
+        // Initialize
+        setMode('draw');
+        setupGlobalEventListeners();
+        updateMaxDist(300);
+        updateNDistances(50);
+        updateNSimulations(399);
+        // Initialize pixel scale display
+        updateActualImageSizeDisplay();
+    </script>
+</body>
+</html>

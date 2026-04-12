@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDE ヒートマップ分析ツール</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .canvas-container {
+            background: #000;
+            position: relative;
+        }
+        
+        .box-annotation {
+            position: absolute;
+            border: 2px solid #06b6d4;
+            background: rgba(6, 182, 212, 0.1);
+            cursor: move;
+            pointer-events: auto;
+            box-sizing: border-box;
+        }
+        
+        .box-annotation:hover {
+            background: rgba(6, 182, 212, 0.2);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+        }
+        
+        .box-annotation.selected {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.15);
+        }
+        
+        .delete-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 16px;
+            height: 16px;
+            background: #ef4444;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            color: white;
+            font-weight: bold;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        
+        .box-annotation:hover .delete-btn {
+            opacity: 1;
+        }
+        
+        .box-label {
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #06b6d4;
+            background: rgba(0,0,0,0.6);
+            padding: 0 3px;
+            border-radius: 3px;
+            line-height: 16px;
+            pointer-events: none;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .box-annotation.selected .box-label {
+            color: #f59e0b;
+        }
+        
+        .tool-btn {
+            transition: all 0.2s;
+        }
+        
+        .tool-btn:hover {
+            transform: translateY(-1px);
+        }
+        
+        .tool-btn.active {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-webkit-slider-track {
+            background: #334155;
+            height: 6px;
+            border-radius: 3px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            background: #06b6d4;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            margin-top: -5px;
+        }
+        
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .drop-zone {
+            border: 2px dashed rgba(6, 182, 212, 0.3);
+            transition: all 0.3s;
+        }
+        
+        .drop-zone.dragover {
+            border-color: #06b6d4;
+            background: rgba(6, 182, 212, 0.05);
+        }
+        
+        .heatmap-output {
+            background: #000;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .param-display {
+            font-family: 'JetBrains Mono', monospace;
+            color: #06b6d4;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass-panel border-b border-slate-700/50">
+        <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-lg font-bold text-white">KDE Heatmap Analyzer</h1>
+            </div>
+            
+            <button onclick="resetAll()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm transition-colors border border-slate-700">
+                リセット
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pt-16 pb-8 px-4 max-w-[1600px] mx-auto">
+        
+        <!-- Upload Section -->
+        <div id="uploadSection" class="max-w-xl mx-auto mt-16">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold mb-2">KDE 密度分布分析</h2>
+                <p class="text-slate-400 text-sm">画像をアップロード → 対象を枠で選択 → ヒートマップを生成</p>
+            </div>
+            
+            <div id="dropZone" class="drop-zone rounded-xl p-12 text-center cursor-pointer bg-slate-800/30">
+                <input type="file" id="fileInput" accept="image/*" class="hidden">
+                <svg class="w-12 h-12 text-cyan-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                <p class="text-sm font-medium mb-1">画像をドラッグ＆ドロップ、またはクリックしてアップロード</p>
+                <p class="text-xs text-slate-500">PNG, JPG, JPEG, BMP, TIFF</p>
+            </div>
+        </div>
+
+        <!-- Workspace -->
+        <div id="workspace" class="hidden grid grid-cols-12 gap-4">
+            
+            <!-- Left: Annotation -->
+            <div class="col-span-12 lg:col-span-7 space-y-3">
+                <div class="glass-panel rounded-xl p-3">
+                    <!-- Toolbar -->
+                    <div class="flex items-center gap-2 mb-3 pb-3 border-b border-slate-700/50">
+                        <button id="drawModeBtn" onclick="setMode('draw')" class="tool-btn active px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-medium flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            描画 (D)
+                        </button>
+                        
+                        <button id="selectModeBtn" onclick="setMode('select')" class="tool-btn px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-medium flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                            選択 (S)
+                        </button>
+                        
+                        <div class="h-4 w-px bg-slate-600"></div>
+                        
+                        <button onclick="clearAllBoxes()" class="tool-btn px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium border border-red-500/30">
+                            すべての枠を削除
+                        </button>
+                        
+                        <button onclick="undoLastBox()" class="tool-btn px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-medium">
+                            元に戻す
+                        </button>
+                        
+                        <div class="flex-1"></div>
+                        
+                        <span class="text-xs text-slate-400">枠数: <span id="boxCount" class="text-cyan-400 font-bold">0</span></span>
+                    </div>
+
+                    <!-- Image Canvas -->
+                    <div id="canvasWrapperOuter" class="rounded-lg overflow-auto relative bg-black" style="min-height: 300px; max-height: 60vh;">
+                        <div id="canvasWrapper" class="relative" style="transform-origin: top left; display: inline-block;">
+                            <div id="annotationLayer" class="absolute top-0 left-0 z-10" style="pointer-events: none; transform-origin: top left;"></div>
+                            <canvas id="mainCanvas" style="pointer-events: none; display: block;"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Image Info -->
+                    <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+                        <span id="imgInfo">画像が読み込まれていません</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="zoomImage(0.9)" class="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-xs">-</button>
+                            <span id="zoomLevel" class="w-10 text-center">100%</span>
+                            <button onclick="zoomImage(1.1)" class="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-xs">+</button>
+                        </div>
+                    </div>
+                </div>
+
+        <!-- Quick Stats -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">X 平均値</p>
+                        <p id="meanX" class="stat-value text-lg font-bold text-cyan-400">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">Y 平均値</p>
+                        <p id="meanY" class="stat-value text-lg font-bold text-cyan-400">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">標準偏差</p>
+                        <p id="stdDev" class="stat-value text-lg font-bold text-cyan-400">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">X 範囲</p>
+                        <p id="rangeX" class="stat-value text-sm font-bold text-slate-300">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">Y 範囲</p>
+                        <p id="rangeY" class="stat-value text-sm font-bold text-slate-300">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">密度ピーク領域</p>
+                        <p id="peakArea" class="stat-value text-sm font-bold text-slate-300">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Controls & Output -->
+            <div class="col-span-12 lg:col-span-5 space-y-3">
+                
+                <!-- KDE Parameters -->
+                <div class="glass-panel rounded-xl p-4">
+                    <h3 class="text-sm font-bold mb-4 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                        KDE パラメータ
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-xs text-slate-300">バンド幅 (Bandwidth)</label>
+                                <span id="bwDisplay" class="param-display text-xs">0.20</span>
+                            </div>
+                            <input type="range" id="bandwidthSlider" min="0.02" max="0.5" step="0.02" value="0.1" class="w-full" oninput="updateBandwidth(this.value)">
+                            <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                                <span>詳細 (0.02)</span>
+                                <span>滑らか (0.5)</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-xs text-slate-300">グリッド解像度</label>
+                                <span id="gridDisplay" class="param-display text-xs">200×200</span>
+                            </div>
+                            <input type="range" id="gridSlider" min="100" max="400" step="20" value="200" class="w-full" oninput="updateGridSize(this.value)">
+                            <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                                <span>高速 (100)</span>
+                                <span>詳細 (400)</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 pt-2">
+                            <input type="checkbox" id="showContour" checked class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-cyan-500">
+                            <label for="showContour" class="text-xs text-slate-300">等高線を表示</label>
+                        </div>
+                        
+                        <div id="contourLevelsRow" class="space-y-1">
+                            <label class="text-xs text-slate-400">等高線レベル（カンマ区切り、0〜1）</label>
+                            <input type="text" id="contourLevels" value="0.3, 0.5, 0.7, 0.9" 
+                                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500">
+                        </div>
+                        
+                        <div>
+                            <button onclick="autoSetBandwidth()" class="w-full py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-300 transition-colors border border-slate-600">
+                                🎯 バンド幅を自動推奨 (Silverman)
+                            </button>
+                        </div>
+                    </div>
+
+                    <button onclick="generateKDE()" id="generateBtn" class="w-full mt-4 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-sm font-bold shadow-lg shadow-cyan-500/25 transition-all">
+                        ヒートマップを生成
+                    </button>
+                </div>
+
+                <!-- Results -->
+                <div class="glass-panel rounded-xl p-4">
+                    <h3 class="text-sm font-bold mb-3">ヒートマップ結果</h3>
+                    
+                    <div id="resultPlaceholder" class="aspect-[4/3] rounded-lg bg-slate-800/50 flex items-center justify-center border border-dashed border-slate-700">
+                        <p class="text-xs text-slate-500">生成を待っています...</p>
+                    </div>
+
+                    <div id="heatmapContainer" class="hidden relative">
+                        <canvas id="heatmapCanvas" class="w-full rounded-lg border border-slate-700"></canvas>
+                    </div>
+                    
+                    <div id="downloadSection" class="hidden mt-3 grid grid-cols-2 gap-2">
+                        <button onclick="downloadResult('heatmap')" class="py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium transition-colors">
+                            ヒートマップをダウンロード (PNG)
+                        </button>
+                        <button onclick="downloadResult('data')" class="py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium transition-colors">
+                            データをダウンロード (CSV)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="glass-panel rounded-xl p-3 text-xs text-slate-400 space-y-1">
+                    <p><span class="text-cyan-400">•</span> 描画モード：ドラッグして検出枠を作成 / ショートカット <kbd class="bg-slate-700 px-1 rounded">D</kbd></p>
+                    <p><span class="text-cyan-400">•</span> 選択モード：枠を移動 / ショートカット <kbd class="bg-slate-700 px-1 rounded">S</kbd></p>
+                    <p><span class="text-cyan-400">•</span> 元に戻す：<kbd class="bg-slate-700 px-1 rounded">Ctrl+Z</kbd> / 選択した枠を削除：<kbd class="bg-slate-700 px-1 rounded">Delete</kbd></p>
+                    <p><span class="text-cyan-400">•</span> バンド幅が小さいほど、ヒートマップはより詳細で鋭くなります</p>
+                    <p><span class="text-cyan-400">•</span> バンド幅が大きいほど、ヒートマップはより滑らかに拡散します</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Global State
+        let currentImage = null;
+        let imgWidth = 0, imgHeight = 0;
+        let boxes = [];
+        let selectedBox = null;
+        let currentMode = 'draw';
+        let isDrawing = false;
+        let dragStart = null;
+        let currentBox = null;
+        let zoom = 1;
+        let boxIdCounter = 0;
+        
+        // Current parameter values - STORED IN VARIABLES
+        let currentBandwidth = 0.1;
+        let currentGridSize = 200;
+        
+        // Canvas setup
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const annotationLayer = document.getElementById('annotationLayer');
+
+        // File Upload
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                loadImage(files[0]);
+            }
+        }
+
+        function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    currentImage = img;
+                    imgWidth = img.width;
+                    imgHeight = img.height;
+                    
+                    document.getElementById('uploadSection').classList.add('hidden');
+                    document.getElementById('workspace').classList.remove('hidden');
+                    
+                    canvas.width = imgWidth;
+                    canvas.height = imgHeight;
+                    
+                    document.getElementById('imgInfo').textContent = `${imgWidth} × ${imgHeight} px | ${file.name}`;
+                    
+                    // Reset zoom when loading new image - 通常サイズ (100%) に戻す
+                    zoom = 1;
+                    document.getElementById('zoomLevel').textContent = '100%';
+                    const wrapper = document.getElementById('canvasWrapper');
+                    wrapper.style.transform = 'scale(1)';
+                    wrapper.style.width = imgWidth + 'px';
+                    wrapper.style.height = imgHeight + 'px';
+                    
+                    drawImage();
+                    setupAnnotationLayer();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function drawImage() {
+            if (!currentImage) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentImage, 0, 0);
+        }
+
+        function setupAnnotationLayer() {
+            // Set annotation layer size to match image
+            annotationLayer.style.width = imgWidth + 'px';
+            annotationLayer.style.height = imgHeight + 'px';
+            annotationLayer.style.pointerEvents = 'auto';
+            annotationLayer.addEventListener('mousedown', handleMouseDown);
+            annotationLayer.addEventListener('mousemove', handleMouseMove);
+            annotationLayer.addEventListener('mouseup', handleMouseUp);
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'd' || e.key === 'D') setMode('draw');
+                if (e.key === 's' || e.key === 'S') setMode('select');
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    e.preventDefault();
+                    undoLastBox();
+                }
+                if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBox) {
+                    deleteBox(selectedBox);
+                }
+            });
+        }
+
+        function getMousePos(e) {
+            const rect = annotationLayer.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        function handleMouseDown(e) {
+            if (e.target.closest('.delete-btn') || e.target.closest('.box-annotation')) return;
+            
+            const pos = getMousePos(e);
+            
+            if (currentMode === 'draw') {
+                isDrawing = true;
+                dragStart = pos;
+                currentBox = createBoxElement(pos.x, pos.y, 0, 0);
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (!isDrawing || !currentBox) return;
+            
+            const pos = getMousePos(e);
+            const w = Math.abs(pos.x - dragStart.x);
+            const h = Math.abs(pos.y - dragStart.y);
+            const bx = Math.min(pos.x, dragStart.x);
+            const by = Math.min(pos.y, dragStart.y);
+            
+            updateBoxElement(currentBox, bx, by, w, h);
+        }
+
+        function handleMouseUp(e) {
+            if (!isDrawing || !currentBox) return;
+            
+            const pos = getMousePos(e);
+            const w = Math.abs(pos.x - dragStart.x);
+            const h = Math.abs(pos.y - dragStart.y);
+            
+            if (w > 5 && h > 5) {
+                currentBox.w = w;
+                currentBox.h = h;
+                currentBox.x = Math.min(pos.x, dragStart.x);
+                currentBox.y = Math.min(pos.y, dragStart.y);
+                boxes.push(currentBox);
+                updateStats();
+                updateBoxCount();
+            } else {
+                if (currentBox.element && currentBox.element.parentNode) {
+                    currentBox.element.remove();
+                }
+            }
+            
+            isDrawing = false;
+            currentBox = null;
+            dragStart = null;
+        }
+
+        function createBoxElement(x, y, w, h) {
+            boxIdCounter++;
+            const div = document.createElement('div');
+            div.className = 'box-annotation';
+            div.id = `box-${boxIdCounter}`;
+            div.dataset.boxId = boxIdCounter;
+            
+            const leftPct = (x / imgWidth) * 100;
+            const topPct = (y / imgHeight) * 100;
+            const widthPct = (w / imgWidth) * 100;
+            const heightPct = (h / imgHeight) * 100;
+            
+            div.style.left = leftPct + '%';
+            div.style.top = topPct + '%';
+            div.style.width = widthPct + '%';
+            div.style.height = heightPct + '%';
+            
+            // Box number label
+            const label = document.createElement('div');
+            label.className = 'box-label';
+            label.textContent = boxIdCounter;
+            div.appendChild(label);
+            
+            const delBtn = document.createElement('div');
+            delBtn.className = 'delete-btn';
+            delBtn.innerHTML = '×';
+            delBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const boxId = parseInt(div.dataset.boxId);
+                const box = boxes.find(b => b.id === boxId);
+                if (box) deleteBox(box);
+            };
+            div.appendChild(delBtn);
+            
+            div.addEventListener('mousedown', (e) => {
+                if (currentMode === 'select') {
+                    e.preventDefault();
+                    const boxId = parseInt(div.dataset.boxId);
+                    const box = boxes.find(b => b.id === boxId);
+                    if (box) {
+                        selectBox(box);
+                        box.isDragging = true;
+                        box.dragStart = getMousePos(e);
+                        box.originalPos = { x: box.x, y: box.y };
+                    }
+                }
+            });
+            
+            annotationLayer.appendChild(div);
+            
+            return { 
+                id: boxIdCounter, 
+                x, y, w, h, 
+                element: div,
+                isDragging: false
+            };
+        }
+
+        function updateBoxElement(box, x, y, w, h) {
+            box.element.style.left = (x / imgWidth * 100) + '%';
+            box.element.style.top = (y / imgHeight * 100) + '%';
+            box.element.style.width = (w / imgWidth * 100) + '%';
+            box.element.style.height = (h / imgHeight * 100) + '%';
+        }
+
+        function selectBox(box) {
+            deselectAll();
+            selectedBox = box;
+            box.element.classList.add('selected');
+        }
+
+        function deselectAll() {
+            boxes.forEach(b => b.element.classList.remove('selected'));
+            selectedBox = null;
+        }
+
+        function deleteBox(box) {
+            if (box.element && box.element.parentNode) {
+                box.element.remove();
+            }
+            boxes = boxes.filter(b => b.id !== box.id);
+            if (selectedBox && selectedBox.id === box.id) selectedBox = null;
+            updateStats();
+            updateBoxCount();
+        }
+
+        function clearAllBoxes() {
+            boxes.forEach(box => {
+                if (box.element && box.element.parentNode) {
+                    box.element.remove();
+                }
+            });
+            boxes = [];
+            selectedBox = null;
+            updateStats();
+            updateBoxCount();
+        }
+
+        function undoLastBox() {
+            if (boxes.length > 0) {
+                deleteBox(boxes[boxes.length - 1]);
+            }
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('drawModeBtn').classList.toggle('active', mode === 'draw');
+            document.getElementById('selectModeBtn').classList.toggle('active', mode === 'select');
+            annotationLayer.style.cursor = mode === 'draw' ? 'crosshair' : 'default';
+        }
+
+        function zoomImage(factor) {
+            zoom *= factor;
+            zoom = Math.max(0.1, Math.min(5, zoom)); // 10%〜500%のズームを許可
+            document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
+            
+            // Apply zoom to the inner wrapper only
+            const wrapper = document.getElementById('canvasWrapper');
+            wrapper.style.transform = `scale(${zoom})`;
+        }
+
+        function updateBoxCount() {
+            document.getElementById('boxCount').textContent = boxes.length;
+        }
+
+        function updateStats() {
+            if (boxes.length === 0) {
+                document.getElementById('meanX').textContent = '-';
+                document.getElementById('meanY').textContent = '-';
+                document.getElementById('stdDev').textContent = '-';
+                document.getElementById('rangeX').textContent = '-';
+                document.getElementById('rangeY').textContent = '-';
+                document.getElementById('peakArea').textContent = '-';
+                return;
+            }
+            
+            const centers = boxes.map(b => ({
+                x: b.x + b.w / 2,
+                y: b.y + b.h / 2
+            }));
+            
+            const meanX = centers.reduce((a, b) => a + b.x, 0) / centers.length;
+            const meanY = centers.reduce((a, b) => a + b.y, 0) / centers.length;
+            
+            const variance = centers.reduce((acc, c) => {
+                return acc + Math.pow(c.x - meanX, 2) + Math.pow(c.y - meanY, 2);
+            }, 0) / centers.length;
+            
+            const minX = Math.min(...centers.map(c => c.x));
+            const maxX = Math.max(...centers.map(c => c.x));
+            const minY = Math.min(...centers.map(c => c.y));
+            const maxY = Math.max(...centers.map(c => c.y));
+            
+            document.getElementById('meanX').textContent = meanX.toFixed(1);
+            document.getElementById('meanY').textContent = meanY.toFixed(1);
+            document.getElementById('stdDev').textContent = Math.sqrt(variance).toFixed(1);
+            document.getElementById('rangeX').textContent = `${minX.toFixed(0)}~${maxX.toFixed(0)}`;
+            document.getElementById('rangeY').textContent = `${minY.toFixed(0)}~${maxY.toFixed(0)}`;
+            
+            // Rough peak area estimate (bounding box of top 25% points by distance to mean)
+            const dists = centers.map(c => Math.hypot(c.x - meanX, c.y - meanY));
+            const sorted = [...dists].sort((a, b) => a - b);
+            const threshold = sorted[Math.floor(sorted.length * 0.25)] || 0;
+            const topCount = dists.filter(d => d <= threshold).length;
+            document.getElementById('peakArea').textContent = `top ${topCount} pts`;
+        }
+
+        // FIXED: Properly update bandwidth variable
+        function updateBandwidth(val) {
+            currentBandwidth = parseFloat(val);
+            document.getElementById('bwDisplay').textContent = currentBandwidth.toFixed(2);
+            console.log('Bandwidth updated to:', currentBandwidth);
+        }
+
+        // Silverman's rule of thumb for bandwidth selection
+        function autoSetBandwidth() {
+            if (boxes.length < 2) {
+                alert('バンド幅を自動推奨するには、少なくとも2つの枠をマークしてください');
+                return;
+            }
+            const centers = boxes.map(b => ({ x: b.x + b.w/2, y: b.y + b.h/2 }));
+            const n = centers.length;
+            const norm = Math.max(imgWidth, imgHeight);
+            const xs = centers.map(c => c.x / norm);
+            const ys = centers.map(c => c.y / norm);
+            const meanX = xs.reduce((a,b) => a+b, 0) / n;
+            const meanY = ys.reduce((a,b) => a+b, 0) / n;
+            const stdX = Math.sqrt(xs.reduce((a,b) => a + (b-meanX)**2, 0) / n);
+            const stdY = Math.sqrt(ys.reduce((a,b) => a + (b-meanY)**2, 0) / n);
+            const std = (stdX + stdY) / 2;
+            const bw = Math.max(0.02, Math.min(0.5, 1.06 * std * Math.pow(n, -0.2)));
+            currentBandwidth = parseFloat(bw.toFixed(2));
+            document.getElementById('bandwidthSlider').value = currentBandwidth;
+            document.getElementById('bwDisplay').textContent = currentBandwidth.toFixed(2);
+        }
+
+        function getContourLevels() {
+            const raw = document.getElementById('contourLevels').value;
+            return raw.split(',')
+                .map(s => parseFloat(s.trim()))
+                .filter(v => !isNaN(v) && v > 0 && v < 1)
+                .sort((a, b) => a - b);
+        }
+
+        // FIXED: Properly update grid size variable
+        function updateGridSize(val) {
+            currentGridSize = parseInt(val);
+            document.getElementById('gridDisplay').textContent = currentGridSize + '×' + currentGridSize;
+            console.log('Grid size updated to:', currentGridSize);
+        }
+
+        // KDE Generation - NOW USES THE STORED VARIABLES
+        async function generateKDE() {
+            if (boxes.length === 0) {
+                alert('少なくとも1つの領域をマークしてください');
+                return;
+            }
+            
+            console.log('Generating with bandwidth:', currentBandwidth, 'grid:', currentGridSize);
+            
+            const btn = document.getElementById('generateBtn');
+            const originalText = btn.textContent;
+            btn.textContent = '計算中 (0%)...';
+            btn.disabled = true;
+            
+            // requestAnimationFrame を使って UI を更新
+            await new Promise(resolve => setTimeout(resolve, 10));
+            
+            try {
+                await computeKDE((progress) => {
+                    btn.textContent = `計算中 (${Math.round(progress)}%)...`;
+                });
+            } catch (e) {
+                console.error('KDE計算失敗:', e);
+                alert('計算に失敗しました。マーク数を減らすか、グリッド解像度を下げてください');
+            }
+            
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+
+        async function computeKDE(onProgress) {
+            const bandwidth = currentBandwidth;
+            const gridSize = currentGridSize;
+            const showContour = document.getElementById('showContour').checked;
+            
+            const centers = boxes.map(b => ({
+                x: b.x + b.w / 2,
+                y: b.y + b.h / 2
+            }));
+            
+            const outCanvas = document.getElementById('heatmapCanvas');
+            const margin = { left: 70, right: 80, top: 40, bottom: 60 };
+            const plotW = 600;
+            const plotH = Math.round(plotW * (imgHeight / imgWidth));
+            const outWidth = plotW + margin.left + margin.right;
+            const outHeight = plotH + margin.top + margin.bottom;
+            
+            outCanvas.width = outWidth;
+            outCanvas.height = outHeight;
+            
+            const hctx = outCanvas.getContext('2d');
+            
+            // White background
+            hctx.fillStyle = 'white';
+            hctx.fillRect(0, 0, outWidth, outHeight);
+            
+            const plotX = margin.left;
+            const plotY = margin.top;
+            
+            const gridX = gridSize;
+            const gridY = Math.round(gridSize * (imgHeight / imgWidth));
+            const xStep = imgWidth / gridX;
+            const yStep = imgHeight / gridY;
+            
+            // 計算量を制限
+            const maxCenters = 500;
+            if (centers.length > maxCenters) {
+                console.warn(`マーク数 ${centers.length} は 500 を超えているため、500 点をランダムサンプリングして計算します`);
+                if (!confirm(`マーク数（${centers.length}）が多いため、500 個を超えた分はランダムに 500 点へサンプリングして計算します。精度に影響する可能性があります。続行しますか？`)) {
+                    if (onProgress) onProgress(100);
+                    return;
+                }
+                for (let i = centers.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [centers[i], centers[j]] = [centers[j], centers[i]];
+                }
+                centers.length = maxCenters;
+            }
+            
+            // Compute density
+            const density = [];
+            let maxVal = 0;
+            const totalCells = gridX * gridY;
+            let computedCells = 0;
+            const reportInterval = Math.max(1, Math.floor(totalCells / 20));
+            
+            for (let i = 0; i < gridX; i++) {
+                density[i] = [];
+                for (let j = 0; j < gridY; j++) {
+                    const x = i * xStep;
+                    const y = j * yStep;
+                    let val = 0;
+                    
+                    const effectiveBandwidth = bandwidth * Math.max(imgWidth, imgHeight);
+                    for (const c of centers) {
+                        const dx = x - c.x;
+                        const dy = y - c.y;
+                        if (Math.abs(dx) > effectiveBandwidth * 3) continue;
+                        if (Math.abs(dy) > effectiveBandwidth * 3) continue;
+                        
+                        const dist2 = (dx * dx + dy * dy) / (imgWidth * imgHeight);
+                        val += Math.exp(-dist2 / (2 * bandwidth * bandwidth));
+                    }
+                    
+                    val = val / (centers.length * 2 * Math.PI * bandwidth * bandwidth);
+                    density[i][j] = val;
+                    if (val > maxVal) maxVal = val;
+                    
+                    computedCells++;
+                    if (onProgress && computedCells % reportInterval === 0) {
+                        await new Promise(r => setTimeout(r, 0));
+                        onProgress((computedCells / totalCells) * 40);
+                    }
+                }
+            }
+            
+            // Normalize to 0-1
+            for (let i = 0; i < gridX; i++) {
+                for (let j = 0; j < gridY; j++) {
+                    density[i][j] /= maxVal;
+                }
+            }
+            
+            // Draw smooth heatmap using ImageData
+            const imgData = hctx.createImageData(plotW, plotH);
+            const data = imgData.data;
+            
+            for (let py = 0; py < plotH; py++) {
+                for (let px = 0; px < plotW; px++) {
+                    // Map pixel to grid
+                    const gi = (px / plotW) * (gridX - 1);
+                    const gj = (py / plotH) * (gridY - 1);
+                    
+                    // Bilinear interpolation
+                    const i0 = Math.floor(gi);
+                    const j0 = Math.floor(gj);
+                    const i1 = Math.min(i0 + 1, gridX - 1);
+                    const j1 = Math.min(j0 + 1, gridY - 1);
+                    
+                    const wi = gi - i0;
+                    const wj = gj - j0;
+                    
+                    const v00 = density[i0]?.[j0] || 0;
+                    const v10 = density[i1]?.[j0] || 0;
+                    const v01 = density[i0]?.[j1] || 0;
+                    const v11 = density[i1]?.[j1] || 0;
+                    
+                    const val = v00 * (1-wi) * (1-wj) + v10 * wi * (1-wj) + v01 * (1-wi) * wj + v11 * wi * wj;
+                    
+                    const [r, g, b] = hotColormap(val);
+                    const idx = (py * plotW + px) * 4;
+                    data[idx] = r;
+                    data[idx + 1] = g;
+                    data[idx + 2] = b;
+                    data[idx + 3] = 255;
+                }
+                
+                if (onProgress && py % 50 === 0) {
+                    await new Promise(r => setTimeout(r, 0));
+                    onProgress(40 + (py / plotH) * 20);
+                }
+            }
+            
+            hctx.putImageData(imgData, plotX, plotY);
+            
+            // Draw grid lines
+            drawGrid(hctx, plotX, plotY, plotW, plotH);
+            
+            // Draw contours
+            if (showContour) {
+                const levels = getContourLevels();
+                if (levels.length === 0) {
+                    console.warn('有効な等高線レベルがありません');
+                }
+                for (let idx = 0; idx < levels.length; idx++) {
+                    await drawSmoothContour(hctx, density, gridX, gridY, levels[idx], plotW, plotH, plotX, plotY);
+                    if (onProgress) {
+                        onProgress(60 + ((idx + 1) / levels.length) * 20);
+                    }
+                }
+            }
+            
+            // Draw axes and colorbar
+            drawAxes(hctx, outWidth, outHeight, margin, plotW, plotH);
+            drawColorbar(hctx, outWidth, outHeight, margin, plotH);
+            
+            if (onProgress) onProgress(100);
+            
+            document.getElementById('resultPlaceholder').classList.add('hidden');
+            document.getElementById('heatmapContainer').classList.remove('hidden');
+            document.getElementById('downloadSection').classList.remove('hidden');
+        }
+
+        // Improved hot colormap (smoother, like matplotlib)
+        function hotColormap(t) {
+            t = Math.max(0, Math.min(1, t));
+            let r, g, b;
+            
+            if (t < 0.33) {
+                // Black to red
+                const s = t / 0.33;
+                r = Math.floor(s * 255);
+                g = 0;
+                b = 0;
+            } else if (t < 0.66) {
+                // Red to yellow
+                const s = (t - 0.33) / 0.33;
+                r = 255;
+                g = Math.floor(s * 255);
+                b = 0;
+            } else {
+                // Yellow to white
+                const s = (t - 0.66) / 0.34;
+                r = 255;
+                g = 255;
+                b = Math.floor(s * 255);
+            }
+            
+            return [r, g, b];
+        }
+        
+        // Draw grid lines
+        function drawGrid(ctx, x, y, w, h) {
+            ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+            ctx.lineWidth = 1;
+            
+            const xTicks = 5;
+            const yTicks = 5;
+            
+            ctx.beginPath();
+            // Vertical lines
+            for (let i = 1; i < xTicks; i++) {
+                const px = x + (i / xTicks) * w;
+                ctx.moveTo(px, y);
+                ctx.lineTo(px, y + h);
+            }
+            // Horizontal lines
+            for (let i = 1; i < yTicks; i++) {
+                const py = y + (i / yTicks) * h;
+                ctx.moveTo(x, py);
+                ctx.lineTo(x + w, py);
+            }
+            ctx.stroke();
+        }
+
+        // Smooth contour drawing with path tracking
+        async function drawSmoothContour(ctx, density, gridX, gridY, level, plotW, plotH, offsetX, offsetY) {
+            const pxW = plotW / gridX;
+            const pxH = plotH / gridY;
+            
+            // Collect all contour segments with their grid positions
+            const segments = [];
+            const marginCells = 1;
+            
+            for (let i = marginCells; i < gridX - 1 - marginCells; i++) {
+                for (let j = marginCells; j < gridY - 1 - marginCells; j++) {
+                    const v00 = density[i][j];
+                    const v10 = density[i+1][j];
+                    const v01 = density[i][j+1];
+                    const v11 = density[i+1][j+1];
+                    
+                    let config = 0;
+                    if (v00 > level) config |= 8;
+                    if (v10 > level) config |= 4;
+                    if (v11 > level) config |= 2;
+                    if (v01 > level) config |= 1;
+                    
+                    if (config === 0 || config === 15) continue;
+                    
+                    const pts = [];
+                    
+                    if ((v00 <= level) !== (v10 <= level)) {
+                        const t = (level - v00) / (v10 - v00);
+                        pts.push({ x: (i + t) * pxW, y: (j + 1) * pxH, gi: i, gj: j });
+                    }
+                    if ((v10 <= level) !== (v11 <= level)) {
+                        const t = (level - v10) / (v11 - v10);
+                        pts.push({ x: (i + 1) * pxW, y: (j + t) * pxH, gi: i, gj: j });
+                    }
+                    if ((v11 <= level) !== (v01 <= level)) {
+                        const t = (level - v11) / (v01 - v11);
+                        pts.push({ x: (i + 1 - t) * pxW, y: j * pxH, gi: i, gj: j });
+                    }
+                    if ((v01 <= level) !== (v00 <= level)) {
+                        const t = (level - v01) / (v00 - v01);
+                        pts.push({ x: i * pxW, y: (j + (1-t)) * pxH, gi: i, gj: j });
+                    }
+                    
+                    if (pts.length >= 2) {
+                        segments.push([pts[0], pts[1]]);
+                    }
+                }
+            }
+            
+            if (segments.length === 0) return;
+            
+            // Connect segments into paths
+            const paths = [];
+            const used = new Set();
+            
+            for (let i = 0; i < segments.length; i++) {
+                if (used.has(i)) continue;
+                
+                const path = [segments[i][0], segments[i][1]];
+                used.add(i);
+                
+                // Extend path forward
+                let extended = true;
+                while (extended && path.length < 1000) {
+                    extended = false;
+                    const last = path[path.length - 1];
+                    
+                    for (let j = 0; j < segments.length; j++) {
+                        if (used.has(j)) continue;
+                        
+                        const [s0, s1] = segments[j];
+                        const d0 = Math.hypot(s0.x - last.x, s0.y - last.y);
+                        const d1 = Math.hypot(s1.x - last.x, s1.y - last.y);
+                        
+                        if (d0 < pxW * 1.5) {
+                            path.push(s1);
+                            used.add(j);
+                            extended = true;
+                            break;
+                        } else if (d1 < pxW * 1.5) {
+                            path.push(s0);
+                            used.add(j);
+                            extended = true;
+                            break;
+                        }
+                    }
+                }
+                
+                paths.push(path);
+            }
+            
+            // Draw paths with smoothing
+            const levels = getContourLevels();
+            const levelIdx = levels.indexOf(level);
+            const colors = ['#4ade80','#facc15','#fb923c','#f87171','#c084fc','#67e8f9'];
+            ctx.strokeStyle = colors[levelIdx % colors.length] || '#40a0ff';
+            ctx.lineWidth = 1.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Margin to avoid edge artifacts
+            const margin = Math.min(plotW, plotH) * 0.02;
+            
+            for (const path of paths) {
+                if (path.length < 3) continue;
+                
+                // Filter points near edge
+                const filtered = path.filter(p => 
+                    p.x > margin && p.x < plotW - margin &&
+                    p.y > margin && p.y < plotH - margin
+                );
+                
+                if (filtered.length < 3) continue;
+                
+                // Simplify path
+                const simplified = [filtered[0]];
+                for (let i = 1; i < filtered.length; i++) {
+                    const d = Math.hypot(filtered[i].x - simplified[simplified.length-1].x,
+                                         filtered[i].y - simplified[simplified.length-1].y);
+                    if (d > 2 || i === filtered.length - 1) {
+                        simplified.push(filtered[i]);
+                    }
+                }
+                
+                if (simplified.length < 3) continue;
+                
+                // Draw smooth curve
+                ctx.beginPath();
+                ctx.moveTo(offsetX + simplified[0].x, offsetY + simplified[0].y);
+                
+                for (let i = 1; i < simplified.length; i++) {
+                    const prev = simplified[i-1];
+                    const curr = simplified[i];
+                    const next = simplified[i+1] || curr;
+                    
+                    const cpX = (prev.x + curr.x) / 2;
+                    const cpY = (prev.y + curr.y) / 2;
+                    
+                    ctx.quadraticCurveTo(
+                        offsetX + cpX, offsetY + cpY,
+                        offsetX + curr.x, offsetY + curr.y
+                    );
+                }
+                
+                ctx.stroke();
+                
+                // Add label for longer paths
+                if (simplified.length > 20) {
+                    const midIdx = Math.floor(simplified.length / 2);
+                    const mid = simplified[midIdx];
+                    const prev = simplified[Math.max(0, midIdx - 3)];
+                    const next = simplified[Math.min(simplified.length - 1, midIdx + 3)];
+                    const angle = Math.atan2(next.y - prev.y, next.x - prev.x);
+                    
+                    ctx.save();
+                    ctx.translate(offsetX + mid.x, offsetY + mid.y);
+                    let rot = angle;
+                    if (rot > Math.PI/4) rot -= Math.PI;
+                    if (rot < -Math.PI/4) rot += Math.PI;
+                    ctx.rotate(rot);
+                    
+                    ctx.font = 'bold 11px "JetBrains Mono", monospace';
+                    const text = level.toFixed(1);
+                    const tw = ctx.measureText(text).width;
+                    
+                    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                    ctx.fillRect(-tw/2 - 2, -7, tw + 4, 14);
+                    
+                    ctx.fillStyle = '#333';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(text, 0, 0);
+                    
+                    ctx.restore();
+                }
+            }
+        }
+
+        function drawAxes(ctx, width, height, margin, plotW, plotH) {
+            const tickLen = 6;
+            const fontSize = 12;
+            
+            const plotX = margin.left;
+            const plotY = margin.top;
+            
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1.5;
+            ctx.fillStyle = '#333';
+            ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+            
+            // Draw box around plot area
+            ctx.strokeRect(plotX, plotY, plotW, plotH);
+            
+            // Y axis ticks
+            const yTicks = 5;
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let i = 0; i <= yTicks; i++) {
+                const y = plotY + plotH - (i / yTicks) * plotH; // 0 at bottom
+                const val = Math.round((i / yTicks) * imgHeight);
+                
+                ctx.beginPath();
+                ctx.moveTo(plotX - tickLen, y);
+                ctx.lineTo(plotX, y);
+                ctx.stroke();
+                
+                ctx.fillText(val.toString(), plotX - 10, y);
+            }
+            
+            // Y axis label - moved further left to avoid overlap
+            ctx.save();
+            ctx.translate(18, plotY + plotH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.font = `bold ${fontSize}px "JetBrains Mono", sans-serif`;
+            ctx.fillText('Y Position (pixels)', 0, 0);
+            ctx.restore();
+            
+            // X axis ticks
+            const xTicks = 5;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            for (let i = 0; i <= xTicks; i++) {
+                const x = plotX + (i / xTicks) * plotW;
+                const val = Math.round((i / xTicks) * imgWidth);
+                
+                ctx.beginPath();
+                ctx.moveTo(x, plotY + plotH);
+                ctx.lineTo(x, plotY + plotH + tickLen);
+                ctx.stroke();
+                
+                ctx.fillText(val.toString(), x, plotY + plotH + 8);
+            }
+            
+            // X axis label
+            ctx.font = `bold ${fontSize}px "JetBrains Mono", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText('X Position (pixels)', plotX + plotW / 2, plotY + plotH + 30);
+        }
+        
+        function drawColorbar(ctx, width, height, margin, plotH) {
+            const cbWidth = 20;
+            const cbHeight = plotH;
+            const cbX = width - margin.right + 20;
+            const cbY = margin.top;
+            
+            // Draw color gradient
+            const steps = 100;
+            const stepH = cbHeight / steps;
+            
+            for (let i = 0; i < steps; i++) {
+                const t = 1 - (i / steps); // 1 at top, 0 at bottom
+                const [r, g, b] = hotColormap(t);
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+                ctx.fillRect(cbX, cbY + i * stepH, cbWidth, stepH + 1);
+            }
+            
+            // Draw border
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(cbX, cbY, cbWidth, cbHeight);
+            
+            // Draw ticks and labels
+            ctx.fillStyle = '#333';
+            ctx.font = '11px "JetBrains Mono", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            
+            const ticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+            for (const t of ticks) {
+                const y = cbY + cbHeight - t * cbHeight;
+                
+                ctx.beginPath();
+                ctx.moveTo(cbX + cbWidth, y);
+                ctx.lineTo(cbX + cbWidth + 5, y);
+                ctx.stroke();
+                
+                ctx.fillText(t.toFixed(1), cbX + cbWidth + 8, y);
+            }
+            
+            // Colorbar label
+            ctx.save();
+            ctx.translate(cbX + cbWidth + 35, cbY + cbHeight / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 12px "JetBrains Mono", sans-serif';
+            ctx.fillText('KDE Density', 0, 0);
+            ctx.restore();
+        }
+
+        function downloadResult(type) {
+            if (type === 'heatmap') {
+                const link = document.createElement('a');
+                link.download = 'kde_heatmap.png';
+                link.href = document.getElementById('heatmapCanvas').toDataURL('image/png');
+                link.click();
+            } else if (type === 'data') {
+                let csv = 'ID,Center_X,Center_Y,Width,Height\n';
+                boxes.forEach((b, i) => {
+                    csv += `${i+1},${(b.x+b.w/2).toFixed(2)},${(b.y+b.h/2).toFixed(2)},${b.w.toFixed(2)},${b.h.toFixed(2)}\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const link = document.createElement('a');
+                link.download = 'centers.csv';
+                link.href = URL.createObjectURL(blob);
+                link.click();
+            }
+        }
+
+        function resetAll() {
+            if (boxes.length > 0) {
+                if (!confirm(`現在 ${boxes.length} 個のマーク枠があります。リセットするとすべて失われます。リセットしてよろしいですか？`)) return;
+            }
+            location.reload();
+        }
+
+        // Initialize
+        setMode('draw');
+        // Initialize displays
+        updateBandwidth(0.1);
+        updateGridSize(200);
+    </script>
+</body>
+</html>
