@@ -214,6 +214,9 @@
                                 <button id="deleteBtn" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition">
                                     删除模式 [D]
                                 </button>
+                                <button id="undoBtn" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm hover:bg-slate-600 transition" title="撤销上一个标注 (Ctrl+Z)">
+                                    撤销 [Ctrl+Z]
+                                </button>
                                 <button id="clearBtn" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm hover:bg-slate-600 transition">
                                     清除全部
                                 </button>
@@ -229,12 +232,12 @@
                         
                         <!-- 绘制提示 -->
                         <div id="drawingHint" class="hidden mb-3 px-4 py-2 bg-cyan-900/30 border border-cyan-500/30 rounded-lg text-sm text-cyan-300">
-                            点击添加顶点，双击或点击第一个点闭合多边形，按 ESC 取消
+                            点击添加顶点，双击或点击第一个点闭合多边形，按 ESC 取消，Ctrl+Z 撤销最后一个标注
                         </div>
                         
                         <!-- 删除提示 -->
                         <div id="deleteHint" class="hidden mb-3 px-4 py-2 bg-red-900/30 border border-red-500/30 rounded-lg text-sm text-red-300">
-                            点击要删除的多边形，按 ESC 退出删除模式
+                            点击多边形直接删除（无需确认），按 ESC 退出删除模式，可用 Ctrl+Z 撤销
                         </div>
                         
                         <!-- 图像容器 -->
@@ -379,9 +382,12 @@
         let isDrawing = false;
         let isDeleteMode = false;
         let currentPoints = [];
-        let polygonIdCounter = 0;
+        let imageIdCounter = 0;   // 图像 ID 计数器
+        let polygonIdCounter = 0; // 多边形 ID 计数器
+        let undoStack = [];       // 撤销栈
         let moranResults = null;  // 当前图片的分析结果
         let zoom = 1.0;
+        let lastZoomPerImage = {}; // 保存每张图的缩放级别
 
         // ==================== DOM 元素 ====================
         const fileInput = document.getElementById('fileInput');
@@ -471,9 +477,9 @@
             reader.onload = (e) => {
                 const img = new Image();
                 img.onload = () => {
-                    polygonIdCounter++;
+                    imageIdCounter++;
                     const imageData = {
-                        id: polygonIdCounter,
+                        id: imageIdCounter,
                         img: img,
                         filename: file.name,
                         width: img.width,
@@ -535,9 +541,10 @@
             currentImageIndex = index;
             const imgData = images[index];
             
-            // 重置缩放
-            zoom = 0.25;
-            zoomWrapper.style.transform = 'scale(0.25)';
+            // 恢复或初始化该图的缩放级别
+            zoom = lastZoomPerImage[index] !== undefined ? lastZoomPerImage[index] : 0.25;
+            zoomWrapper.style.transform = `scale(${zoom})`;
+            lastZoomPerImage[index] = zoom; // 确保初始值也被记录
             updateZoomDisplay();
             
             // 绘制当前图片
@@ -620,10 +627,8 @@
         
         function setZoom(newZoom) {
             zoom = Math.max(0.2, Math.min(5.0, newZoom));
-            
-            // 使用 CSS transform 缩放，保持宽高比
             zoomWrapper.style.transform = `scale(${zoom})`;
-            
+            if (currentImageIndex >= 0) lastZoomPerImage[currentImageIndex] = zoom;
             updateZoomDisplay();
         }
         
@@ -635,6 +640,25 @@
         document.addEventListener('keydown', (e) => {
             // 忽略在输入框中的按键
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+            // Ctrl+Z 撤销
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                if (!isDrawing) undoLastPolygon();
+                return;
+            }
+
+            // 方向键切换图片
+            if (e.key === 'ArrowLeft' && images.length > 1) {
+                e.preventDefault();
+                switchToImage((currentImageIndex - 1 + images.length) % images.length);
+                return;
+            }
+            if (e.key === 'ArrowRight' && images.length > 1) {
+                e.preventDefault();
+                switchToImage((currentImageIndex + 1) % images.length);
+                return;
+            }
             
             switch (e.key.toLowerCase()) {
                 case 's':
@@ -789,8 +813,9 @@
                 centroid: centroid
             };
             
-            // 添加到当前图片的标注列表
+            // 添加到当前图片的标注列表，并记录撤销快照
             images[currentImageIndex].polygons.push(polygon);
+            undoStack.push({ imageIndex: currentImageIndex, polygonId: polygon.id });
             renderPolygon(polygon);
             updateStats();
             updateThumbnailBadge(currentImageIndex);
@@ -808,14 +833,25 @@
             return Math.abs(area) / 2;
         }
         
+        // 正确的多边形几何质心（Shoelace 加权，而非顶点平均）
         function calculateCentroid(points) {
-            let cx = 0, cy = 0;
             const n = points.length;
+            let area = 0, cx = 0, cy = 0;
             for (let i = 0; i < n; i++) {
-                cx += points[i].x;
-                cy += points[i].y;
+                const j = (i + 1) % n;
+                const cross = points[i].x * points[j].y - points[j].x * points[i].y;
+                area += cross;
+                cx += (points[i].x + points[j].x) * cross;
+                cy += (points[i].y + points[j].y) * cross;
             }
-            return { x: cx / n, y: cy / n };
+            area /= 2;
+            if (Math.abs(area) < 1e-10) {
+                // 退化多边形：回退到顶点平均
+                let sx = 0, sy = 0;
+                points.forEach(p => { sx += p.x; sy += p.y; });
+                return { x: sx / n, y: sy / n };
+            }
+            return { x: cx / (6 * area), y: cy / (6 * area) };
         }
         
         function renderPolygon(polygon) {
@@ -856,19 +892,15 @@
             text.textContent = polygon.id;
             group.appendChild(text);
             
-            // 点击事件：如果在删除模式则删除，否则普通选中
+            // 点击事件：删除模式下直接删除（无需 confirm）
             group.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (isDeleteMode) {
-                    if (confirm(`确定删除标注 #${polygon.id}?`)) {
-                        deletePolygon(polygon.id);
-                        // 如果删除后没有多边形了，自动退出删除模式
-                        if (currentImageIndex >= 0 && images[currentImageIndex].polygons.length === 0) {
-                            exitDeleteMode();
-                        }
+                    deletePolygon(polygon.id);
+                    if (currentImageIndex >= 0 && images[currentImageIndex].polygons.length === 0) {
+                        exitDeleteMode();
                     }
                 }
-                // 非删除模式下不响应点击（或可以添加选中功能）
             });
             
             polygonSvg.appendChild(group);
@@ -889,6 +921,21 @@
             updateThumbnailBadge(currentImageIndex);
         }
         
+        function undoLastPolygon() {
+            if (undoStack.length === 0) return;
+            const last = undoStack.pop();
+            // 只有在当前图时才能直接删，否则只从数据中移除
+            const img = images[last.imageIndex];
+            if (!img) return;
+            img.polygons = img.polygons.filter(p => p.id !== last.polygonId);
+            if (last.imageIndex === currentImageIndex) {
+                const group = polygonSvg.querySelector(`g[data-id="${last.polygonId}"]`);
+                if (group) group.remove();
+                updateStats();
+                updateThumbnailBadge(last.imageIndex);
+            }
+        }
+
         // ==================== 删除模式 ====================
         deleteBtn.addEventListener('click', toggleDeleteMode);
         
@@ -901,38 +948,13 @@
         }
         
         function enterDeleteMode() {
-            // 如果正在绘制，先停止
-            if (isDrawing) {
-                stopDrawing();
-            }
-            
+            if (isDrawing) stopDrawing();
             isDeleteMode = true;
             deleteHint.classList.remove('hidden');
             deleteBtn.classList.add('ring-2', 'ring-white', 'scale-105');
             polygonSvg.classList.add('delete-active', 'delete-mode');
-            
-            // 为所有现有多边形添加点击删除事件
-            const groups = polygonSvg.querySelectorAll('.polygon-group');
-            groups.forEach(group => {
-                // 移除旧的点击事件（如果有）
-                const newGroup = group.cloneNode(true);
-                group.parentNode.replaceChild(newGroup, group);
-                
-                // 添加新的点击删除事件
-                newGroup.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const id = parseInt(newGroup.getAttribute('data-id'));
-                    if (confirm(`确定删除标注 #${id}?`)) {
-                        deletePolygon(id);
-                        // 如果删除后没有多边形了，自动退出删除模式
-                        if (currentImageIndex >= 0 && images[currentImageIndex].polygons.length === 0) {
-                            exitDeleteMode();
-                        }
-                    }
-                });
-            });
-            
-            // 绑定 ESC 键退出
+            // 委托：SVG 层统一监听点击，isDeleteMode 标志控制行为
+            // 不再 cloneNode，避免重复绑定
             document.addEventListener('keydown', handleDeleteKey);
         }
         
@@ -950,6 +972,10 @@
             }
         }
         
+        document.getElementById('undoBtn').addEventListener('click', () => {
+            if (!isDrawing) undoLastPolygon();
+        });
+
         clearBtn.addEventListener('click', () => {
             if (currentImageIndex < 0) return;
             const currentPolygons = images[currentImageIndex].polygons;
@@ -1014,10 +1040,13 @@
                 values = values.map(v => Math.log(v + 1));
             }
             
-            const weights = buildKNNWeights(points, k);
+            // 预计算距离矩阵，供 buildKNNWeights 使用
+            const distMat = buildDistMatrix(points);
+            const weights = buildKNNWeights(points, k, distMat);
             const result = calculateMoranI(values, weights);
             const permResult = permutationTest(values, weights, result.I, permutations);
-            const quadrants = calculateQuadrants(values, weights);
+            // 复用已计算的 z 和 spatialLag，避免重复计算
+            const quadrants = calculateQuadrants(result.z, result.spatialLag);
             
             moranResults = {
                 ...result,
@@ -1033,18 +1062,36 @@
             displayResults(moranResults);
         }
         
-        function buildKNNWeights(points, k) {
+        // 预计算距离矩阵，避免 buildKNNWeights 重复计算点对距离
+        function buildDistMatrix(points) {
             const n = points.length;
+            const mat = new Float64Array(n * n);
+            for (let i = 0; i < n; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    const d = Math.sqrt(
+                        (points[i].x - points[j].x) ** 2 +
+                        (points[i].y - points[j].y) ** 2
+                    );
+                    mat[i * n + j] = d;
+                    mat[j * n + i] = d;
+                }
+            }
+            return mat;
+        }
+
+        function buildKNNWeights(points, k, distMat) {
+            const n = points.length;
+            // 如果没传距离矩阵则现算
+            if (!distMat) distMat = buildDistMatrix(points);
             const weights = Array(n).fill(null).map(() => Array(n).fill(0));
             
             for (let i = 0; i < n; i++) {
-                const distances = points.map((p, j) => ({
-                    idx: j,
-                    dist: Math.sqrt(Math.pow(p.x - points[i].x, 2) + Math.pow(p.y - points[i].y, 2))
-                }));
-                
-                distances.sort((a, b) => a.dist - b.dist);
-                const kNearest = distances.slice(1, k + 1);
+                const row = [];
+                for (let j = 0; j < n; j++) {
+                    if (i !== j) row.push({ idx: j, dist: distMat[i * n + j] });
+                }
+                row.sort((a, b) => a.dist - b.dist);
+                const kNearest = row.slice(0, k);
                 
                 const weight = 1.0 / kNearest.length;
                 kNearest.forEach(neighbor => {
@@ -1097,53 +1144,58 @@
             return { slope, intercept };
         }
         
+        // 轻量版 I 值计算，供置换检验使用（不算 regression，速度更快）
+        function computeIFast(z, weights) {
+            const n = z.length;
+            let num = 0, den = 0;
+            for (let i = 0; i < n; i++) {
+                let lag = 0;
+                for (let j = 0; j < n; j++) lag += weights[i][j] * z[j];
+                num += z[i] * lag;
+                den += z[i] * z[i];
+            }
+            return den !== 0 ? num / den : 0;
+        }
+
         function permutationTest(values, weights, observedI, permutations) {
             const n = values.length;
+            const mean = values.reduce((a, b) => a + b, 0) / n;
+            // 预计算标准化偏差，置换时只需 shuffle z
+            const zBase = values.map(v => v - mean);
+
             let countExtreme = 0;
             const permutedI = [];
-            
+            const shuffledZ = [...zBase];
+
             for (let p = 0; p < permutations; p++) {
-                const shuffled = [...values];
+                // Fisher-Yates shuffle
                 for (let i = n - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    [shuffledZ[i], shuffledZ[j]] = [shuffledZ[j], shuffledZ[i]];
                 }
-                
-                const result = calculateMoranI(shuffled, weights);
-                permutedI.push(result.I);
-                
-                if (Math.abs(result.I) >= Math.abs(observedI)) {
-                    countExtreme++;
-                }
+                const pI = computeIFast(shuffledZ, weights);
+                permutedI.push(pI);
+                if (Math.abs(pI) >= Math.abs(observedI)) countExtreme++;
             }
-            
+
             const pValue = (countExtreme + 1) / (permutations + 1);
             const meanPerm = permutedI.reduce((a, b) => a + b, 0) / permutations;
-            const variance = permutedI.reduce((sum, val) => sum + Math.pow(val - meanPerm, 2), 0) / permutations;
+            const variance = permutedI.reduce((sum, v) => sum + (v - meanPerm) ** 2, 0) / permutations;
             const stdPerm = Math.sqrt(variance);
             const zScore = stdPerm > 0 ? (observedI - meanPerm) / stdPerm : 0;
-            
+
             return { pValue, zScore };
         }
         
-        function calculateQuadrants(values, weights) {
-            const n = values.length;
-            const mean = values.reduce((a, b) => a + b, 0) / n;
-            const z = values.map(v => v - mean);
-            
-            const spatialLag = z.map((zi, i) => {
-                return weights[i].reduce((sum, w, j) => sum + w * z[j], 0);
-            });
-            
+        // 复用已计算好的 z 和 spatialLag，避免重复运算
+        function calculateQuadrants(z, spatialLag) {
             const quads = { HH: 0, HL: 0, LH: 0, LL: 0 };
-            
-            for (let i = 0; i < n; i++) {
-                if (z[i] > 0 && spatialLag[i] > 0) quads.HH++;
+            for (let i = 0; i < z.length; i++) {
+                if (z[i] > 0 && spatialLag[i] > 0)       quads.HH++;
                 else if (z[i] > 0 && spatialLag[i] <= 0) quads.HL++;
                 else if (z[i] <= 0 && spatialLag[i] > 0) quads.LH++;
-                else quads.LL++;
+                else                                       quads.LL++;
             }
-            
             return quads;
         }
         
