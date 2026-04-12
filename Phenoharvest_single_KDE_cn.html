@@ -69,6 +69,25 @@
             opacity: 1;
         }
         
+        .box-label {
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #06b6d4;
+            background: rgba(0,0,0,0.6);
+            padding: 0 3px;
+            border-radius: 3px;
+            line-height: 16px;
+            pointer-events: none;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .box-annotation.selected .box-label {
+            color: #f59e0b;
+        }
+        
         .tool-btn {
             transition: all 0.2s;
         }
@@ -221,7 +240,7 @@
                     </div>
                 </div>
 
-                <!-- Quick Stats -->
+        <!-- Quick Stats -->
                 <div class="grid grid-cols-3 gap-3">
                     <div class="glass-panel rounded-lg p-3">
                         <p class="text-[10px] text-slate-400 uppercase">X 均值</p>
@@ -234,6 +253,18 @@
                     <div class="glass-panel rounded-lg p-3">
                         <p class="text-[10px] text-slate-400 uppercase">标准差</p>
                         <p id="stdDev" class="stat-value text-lg font-bold text-cyan-400">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">X 范围</p>
+                        <p id="rangeX" class="stat-value text-sm font-bold text-slate-300">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">Y 范围</p>
+                        <p id="rangeY" class="stat-value text-sm font-bold text-slate-300">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">密度峰值区域</p>
+                        <p id="peakArea" class="stat-value text-sm font-bold text-slate-300">-</p>
                     </div>
                 </div>
             </div>
@@ -275,7 +306,19 @@
 
                         <div class="flex items-center gap-3 pt-2">
                             <input type="checkbox" id="showContour" checked class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-cyan-500">
-                            <label for="showContour" class="text-xs text-slate-300">显示等高线 (0.3, 0.5, 0.7, 0.9)</label>
+                            <label for="showContour" class="text-xs text-slate-300">显示等高线</label>
+                        </div>
+                        
+                        <div id="contourLevelsRow" class="space-y-1">
+                            <label class="text-xs text-slate-400">等高线级别（逗号分隔，0~1）</label>
+                            <input type="text" id="contourLevels" value="0.3, 0.5, 0.7, 0.9" 
+                                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500">
+                        </div>
+                        
+                        <div>
+                            <button onclick="autoSetBandwidth()" class="w-full py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-300 transition-colors border border-slate-600">
+                                🎯 自动推荐带宽 (Silverman)
+                            </button>
                         </div>
                     </div>
 
@@ -308,8 +351,9 @@
 
                 <!-- Instructions -->
                 <div class="glass-panel rounded-xl p-3 text-xs text-slate-400 space-y-1">
-                    <p><span class="text-cyan-400">•</span> 画框模式：拖拽创建检测框</p>
-                    <p><span class="text-cyan-400">•</span> 选择模式：移动或调整框大小</p>
+                    <p><span class="text-cyan-400">•</span> 画框模式：拖拽创建检测框 / 快捷键 <kbd class="bg-slate-700 px-1 rounded">D</kbd></p>
+                    <p><span class="text-cyan-400">•</span> 选择模式：移动框 / 快捷键 <kbd class="bg-slate-700 px-1 rounded">S</kbd></p>
+                    <p><span class="text-cyan-400">•</span> 撤销：<kbd class="bg-slate-700 px-1 rounded">Ctrl+Z</kbd> / 删除选中框：<kbd class="bg-slate-700 px-1 rounded">Delete</kbd></p>
                     <p><span class="text-cyan-400">•</span> 带宽越小，热力图越精细尖锐</p>
                     <p><span class="text-cyan-400">•</span> 带宽越大，热力图越平滑扩散</p>
                 </div>
@@ -493,6 +537,12 @@
             div.style.width = widthPct + '%';
             div.style.height = heightPct + '%';
             
+            // Box number label
+            const label = document.createElement('div');
+            label.className = 'box-label';
+            label.textContent = boxIdCounter;
+            div.appendChild(label);
+            
             const delBtn = document.createElement('div');
             delBtn.className = 'delete-btn';
             delBtn.innerHTML = '×';
@@ -601,6 +651,9 @@
                 document.getElementById('meanX').textContent = '-';
                 document.getElementById('meanY').textContent = '-';
                 document.getElementById('stdDev').textContent = '-';
+                document.getElementById('rangeX').textContent = '-';
+                document.getElementById('rangeY').textContent = '-';
+                document.getElementById('peakArea').textContent = '-';
                 return;
             }
             
@@ -616,9 +669,23 @@
                 return acc + Math.pow(c.x - meanX, 2) + Math.pow(c.y - meanY, 2);
             }, 0) / centers.length;
             
+            const minX = Math.min(...centers.map(c => c.x));
+            const maxX = Math.max(...centers.map(c => c.x));
+            const minY = Math.min(...centers.map(c => c.y));
+            const maxY = Math.max(...centers.map(c => c.y));
+            
             document.getElementById('meanX').textContent = meanX.toFixed(1);
             document.getElementById('meanY').textContent = meanY.toFixed(1);
             document.getElementById('stdDev').textContent = Math.sqrt(variance).toFixed(1);
+            document.getElementById('rangeX').textContent = `${minX.toFixed(0)}~${maxX.toFixed(0)}`;
+            document.getElementById('rangeY').textContent = `${minY.toFixed(0)}~${maxY.toFixed(0)}`;
+            
+            // Rough peak area estimate (bounding box of top 25% points by distance to mean)
+            const dists = centers.map(c => Math.hypot(c.x - meanX, c.y - meanY));
+            const sorted = [...dists].sort((a, b) => a - b);
+            const threshold = sorted[Math.floor(sorted.length * 0.25)] || 0;
+            const topCount = dists.filter(d => d <= threshold).length;
+            document.getElementById('peakArea').textContent = `top ${topCount} pts`;
         }
 
         // FIXED: Properly update bandwidth variable
@@ -626,6 +693,36 @@
             currentBandwidth = parseFloat(val);
             document.getElementById('bwDisplay').textContent = currentBandwidth.toFixed(2);
             console.log('Bandwidth updated to:', currentBandwidth);
+        }
+
+        // Silverman's rule of thumb for bandwidth selection
+        function autoSetBandwidth() {
+            if (boxes.length < 2) {
+                alert('请至少标注2个框才能自动推荐带宽');
+                return;
+            }
+            const centers = boxes.map(b => ({ x: b.x + b.w/2, y: b.y + b.h/2 }));
+            const n = centers.length;
+            const norm = Math.max(imgWidth, imgHeight);
+            const xs = centers.map(c => c.x / norm);
+            const ys = centers.map(c => c.y / norm);
+            const meanX = xs.reduce((a,b) => a+b, 0) / n;
+            const meanY = ys.reduce((a,b) => a+b, 0) / n;
+            const stdX = Math.sqrt(xs.reduce((a,b) => a + (b-meanX)**2, 0) / n);
+            const stdY = Math.sqrt(ys.reduce((a,b) => a + (b-meanY)**2, 0) / n);
+            const std = (stdX + stdY) / 2;
+            const bw = Math.max(0.02, Math.min(0.5, 1.06 * std * Math.pow(n, -0.2)));
+            currentBandwidth = parseFloat(bw.toFixed(2));
+            document.getElementById('bandwidthSlider').value = currentBandwidth;
+            document.getElementById('bwDisplay').textContent = currentBandwidth.toFixed(2);
+        }
+
+        function getContourLevels() {
+            const raw = document.getElementById('contourLevels').value;
+            return raw.split(',')
+                .map(s => parseFloat(s.trim()))
+                .filter(v => !isNaN(v) && v > 0 && v < 1)
+                .sort((a, b) => a - b);
         }
 
         // FIXED: Properly update grid size variable
@@ -702,6 +799,11 @@
             // 限制计算量
             const maxCenters = 500;
             if (centers.length > maxCenters) {
+                console.warn(`标注数量 ${centers.length} 超过500，将随机采样500个点进行计算`);
+                if (!confirm(`标注数量（${centers.length}）较多，超出500个后将随机采样500个点计算，可能影响精度。继续？`)) {
+                    if (onProgress) onProgress(100);
+                    return;
+                }
                 for (let i = centers.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [centers[i], centers[j]] = [centers[j], centers[i]];
@@ -800,7 +902,10 @@
             
             // Draw contours
             if (showContour) {
-                const levels = [0.3, 0.5, 0.7, 0.9];
+                const levels = getContourLevels();
+                if (levels.length === 0) {
+                    console.warn('没有有效的等高线级别');
+                }
                 for (let idx = 0; idx < levels.length; idx++) {
                     await drawSmoothContour(hctx, density, gridX, gridY, levels[idx], plotW, plotH, plotX, plotY);
                     if (onProgress) {
@@ -964,7 +1069,10 @@
             }
             
             // Draw paths with smoothing
-            ctx.strokeStyle = level >= 0.7 ? '#00ffff' : '#40a0ff';
+            const levels = getContourLevels();
+            const levelIdx = levels.indexOf(level);
+            const colors = ['#4ade80','#facc15','#fb923c','#f87171','#c084fc','#67e8f9'];
+            ctx.strokeStyle = colors[levelIdx % colors.length] || '#40a0ff';
             ctx.lineWidth = 1.5;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -1167,9 +1275,9 @@
                 link.href = document.getElementById('heatmapCanvas').toDataURL('image/png');
                 link.click();
             } else if (type === 'data') {
-                let csv = 'ID,Center_X,Center_Y\n';
+                let csv = 'ID,Center_X,Center_Y,Width,Height\n';
                 boxes.forEach((b, i) => {
-                    csv += `${i+1},${(b.x+b.w/2).toFixed(2)},${(b.y+b.h/2).toFixed(2)}\n`;
+                    csv += `${i+1},${(b.x+b.w/2).toFixed(2)},${(b.y+b.h/2).toFixed(2)},${b.w.toFixed(2)},${b.h.toFixed(2)}\n`;
                 });
                 const blob = new Blob([csv], { type: 'text/csv' });
                 const link = document.createElement('a');
@@ -1180,7 +1288,10 @@
         }
 
         function resetAll() {
-            if (confirm('重置所有内容？')) location.reload();
+            if (boxes.length > 0) {
+                if (!confirm(`当前有 ${boxes.length} 个标注框，重置后将全部丢失。确认重置？`)) return;
+            }
+            location.reload();
         }
 
         // Initialize
