@@ -69,6 +69,25 @@
             opacity: 1;
         }
         
+        .box-label {
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #06b6d4;
+            background: rgba(0,0,0,0.6);
+            padding: 0 3px;
+            border-radius: 3px;
+            line-height: 16px;
+            pointer-events: none;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .box-annotation.selected .box-label {
+            color: #f59e0b;
+        }
+        
         .tool-btn {
             transition: all 0.2s;
         }
@@ -156,7 +175,7 @@
         <div id="uploadSection" class="max-w-xl mx-auto mt-16">
             <div class="text-center mb-6">
                 <h2 class="text-2xl font-bold mb-2">KDE 密度分布分析</h2>
-                <p class="text-slate-400 text-sm">画像をアップロードし、領域をマークしてヒートマップを生成</p>
+                <p class="text-slate-400 text-sm">画像をアップロード → 対象を枠で選択 → ヒートマップを生成</p>
             </div>
             
             <div id="dropZone" class="drop-zone rounded-xl p-12 text-center cursor-pointer bg-slate-800/30">
@@ -164,7 +183,7 @@
                 <svg class="w-12 h-12 text-cyan-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                 </svg>
-                <p class="text-sm font-medium mb-1">画像をドラッグ＆ドロップまたはクリックしてアップロード</p>
+                <p class="text-sm font-medium mb-1">画像をドラッグ＆ドロップ、またはクリックしてアップロード</p>
                 <p class="text-xs text-slate-500">PNG, JPG, JPEG, BMP, TIFF</p>
             </div>
         </div>
@@ -190,7 +209,7 @@
                         <div class="h-4 w-px bg-slate-600"></div>
                         
                         <button onclick="clearAllBoxes()" class="tool-btn px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium border border-red-500/30">
-                            全ての枠を削除
+                            すべての枠を削除
                         </button>
                         
                         <button onclick="undoLastBox()" class="tool-btn px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-medium">
@@ -221,7 +240,7 @@
                     </div>
                 </div>
 
-                <!-- Quick Stats -->
+        <!-- Quick Stats -->
                 <div class="grid grid-cols-3 gap-3">
                     <div class="glass-panel rounded-lg p-3">
                         <p class="text-[10px] text-slate-400 uppercase">X 平均値</p>
@@ -234,6 +253,18 @@
                     <div class="glass-panel rounded-lg p-3">
                         <p class="text-[10px] text-slate-400 uppercase">標準偏差</p>
                         <p id="stdDev" class="stat-value text-lg font-bold text-cyan-400">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">X 範囲</p>
+                        <p id="rangeX" class="stat-value text-sm font-bold text-slate-300">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">Y 範囲</p>
+                        <p id="rangeY" class="stat-value text-sm font-bold text-slate-300">-</p>
+                    </div>
+                    <div class="glass-panel rounded-lg p-3">
+                        <p class="text-[10px] text-slate-400 uppercase">密度ピーク領域</p>
+                        <p id="peakArea" class="stat-value text-sm font-bold text-slate-300">-</p>
                     </div>
                 </div>
             </div>
@@ -256,7 +287,7 @@
                             </div>
                             <input type="range" id="bandwidthSlider" min="0.02" max="0.5" step="0.02" value="0.1" class="w-full" oninput="updateBandwidth(this.value)">
                             <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
-                                <span>細かい (0.02)</span>
+                                <span>詳細 (0.02)</span>
                                 <span>滑らか (0.5)</span>
                             </div>
                         </div>
@@ -275,7 +306,19 @@
 
                         <div class="flex items-center gap-3 pt-2">
                             <input type="checkbox" id="showContour" checked class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-cyan-500">
-                            <label for="showContour" class="text-xs text-slate-300">等高線を表示 (0.3, 0.5, 0.7, 0.9)</label>
+                            <label for="showContour" class="text-xs text-slate-300">等高線を表示</label>
+                        </div>
+                        
+                        <div id="contourLevelsRow" class="space-y-1">
+                            <label class="text-xs text-slate-400">等高線レベル（カンマ区切り、0〜1）</label>
+                            <input type="text" id="contourLevels" value="0.3, 0.5, 0.7, 0.9" 
+                                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500">
+                        </div>
+                        
+                        <div>
+                            <button onclick="autoSetBandwidth()" class="w-full py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-300 transition-colors border border-slate-600">
+                                🎯 バンド幅を自動推奨 (Silverman)
+                            </button>
                         </div>
                     </div>
 
@@ -308,10 +351,11 @@
 
                 <!-- Instructions -->
                 <div class="glass-panel rounded-xl p-3 text-xs text-slate-400 space-y-1">
-                    <p><span class="text-cyan-400">•</span> 描画モード：ドラッグして検出枠を作成</p>
-                    <p><span class="text-cyan-400">•</span> 選択モード：枠を移動または削除</p>
-                    <p><span class="text-cyan-400">•</span> バンド幅が小さいほど、ヒートマップが細かく鋭くなる</p>
-                    <p><span class="text-cyan-400">•</span> バンド幅が大きいほど、ヒートマップが滑らかに広がる</p>
+                    <p><span class="text-cyan-400">•</span> 描画モード：ドラッグして検出枠を作成 / ショートカット <kbd class="bg-slate-700 px-1 rounded">D</kbd></p>
+                    <p><span class="text-cyan-400">•</span> 選択モード：枠を移動 / ショートカット <kbd class="bg-slate-700 px-1 rounded">S</kbd></p>
+                    <p><span class="text-cyan-400">•</span> 元に戻す：<kbd class="bg-slate-700 px-1 rounded">Ctrl+Z</kbd> / 選択した枠を削除：<kbd class="bg-slate-700 px-1 rounded">Delete</kbd></p>
+                    <p><span class="text-cyan-400">•</span> バンド幅が小さいほど、ヒートマップはより詳細で鋭くなります</p>
+                    <p><span class="text-cyan-400">•</span> バンド幅が大きいほど、ヒートマップはより滑らかに拡散します</p>
                 </div>
             </div>
         </div>
@@ -372,7 +416,7 @@
                     
                     document.getElementById('imgInfo').textContent = `${imgWidth} × ${imgHeight} px | ${file.name}`;
                     
-                    // Reset zoom when loading new image - 设置为正常大小(100%)
+                    // Reset zoom when loading new image - 通常サイズ (100%) に戻す
                     zoom = 1;
                     document.getElementById('zoomLevel').textContent = '100%';
                     const wrapper = document.getElementById('canvasWrapper');
@@ -493,6 +537,12 @@
             div.style.width = widthPct + '%';
             div.style.height = heightPct + '%';
             
+            // Box number label
+            const label = document.createElement('div');
+            label.className = 'box-label';
+            label.textContent = boxIdCounter;
+            div.appendChild(label);
+            
             const delBtn = document.createElement('div');
             delBtn.className = 'delete-btn';
             delBtn.innerHTML = '×';
@@ -584,7 +634,7 @@
 
         function zoomImage(factor) {
             zoom *= factor;
-            zoom = Math.max(0.1, Math.min(5, zoom)); // 允许10%-500%缩放
+            zoom = Math.max(0.1, Math.min(5, zoom)); // 10%〜500%のズームを許可
             document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
             
             // Apply zoom to the inner wrapper only
@@ -601,6 +651,9 @@
                 document.getElementById('meanX').textContent = '-';
                 document.getElementById('meanY').textContent = '-';
                 document.getElementById('stdDev').textContent = '-';
+                document.getElementById('rangeX').textContent = '-';
+                document.getElementById('rangeY').textContent = '-';
+                document.getElementById('peakArea').textContent = '-';
                 return;
             }
             
@@ -616,9 +669,23 @@
                 return acc + Math.pow(c.x - meanX, 2) + Math.pow(c.y - meanY, 2);
             }, 0) / centers.length;
             
+            const minX = Math.min(...centers.map(c => c.x));
+            const maxX = Math.max(...centers.map(c => c.x));
+            const minY = Math.min(...centers.map(c => c.y));
+            const maxY = Math.max(...centers.map(c => c.y));
+            
             document.getElementById('meanX').textContent = meanX.toFixed(1);
             document.getElementById('meanY').textContent = meanY.toFixed(1);
             document.getElementById('stdDev').textContent = Math.sqrt(variance).toFixed(1);
+            document.getElementById('rangeX').textContent = `${minX.toFixed(0)}~${maxX.toFixed(0)}`;
+            document.getElementById('rangeY').textContent = `${minY.toFixed(0)}~${maxY.toFixed(0)}`;
+            
+            // Rough peak area estimate (bounding box of top 25% points by distance to mean)
+            const dists = centers.map(c => Math.hypot(c.x - meanX, c.y - meanY));
+            const sorted = [...dists].sort((a, b) => a - b);
+            const threshold = sorted[Math.floor(sorted.length * 0.25)] || 0;
+            const topCount = dists.filter(d => d <= threshold).length;
+            document.getElementById('peakArea').textContent = `top ${topCount} pts`;
         }
 
         // FIXED: Properly update bandwidth variable
@@ -626,6 +693,36 @@
             currentBandwidth = parseFloat(val);
             document.getElementById('bwDisplay').textContent = currentBandwidth.toFixed(2);
             console.log('Bandwidth updated to:', currentBandwidth);
+        }
+
+        // Silverman's rule of thumb for bandwidth selection
+        function autoSetBandwidth() {
+            if (boxes.length < 2) {
+                alert('バンド幅を自動推奨するには、少なくとも2つの枠をマークしてください');
+                return;
+            }
+            const centers = boxes.map(b => ({ x: b.x + b.w/2, y: b.y + b.h/2 }));
+            const n = centers.length;
+            const norm = Math.max(imgWidth, imgHeight);
+            const xs = centers.map(c => c.x / norm);
+            const ys = centers.map(c => c.y / norm);
+            const meanX = xs.reduce((a,b) => a+b, 0) / n;
+            const meanY = ys.reduce((a,b) => a+b, 0) / n;
+            const stdX = Math.sqrt(xs.reduce((a,b) => a + (b-meanX)**2, 0) / n);
+            const stdY = Math.sqrt(ys.reduce((a,b) => a + (b-meanY)**2, 0) / n);
+            const std = (stdX + stdY) / 2;
+            const bw = Math.max(0.02, Math.min(0.5, 1.06 * std * Math.pow(n, -0.2)));
+            currentBandwidth = parseFloat(bw.toFixed(2));
+            document.getElementById('bandwidthSlider').value = currentBandwidth;
+            document.getElementById('bwDisplay').textContent = currentBandwidth.toFixed(2);
+        }
+
+        function getContourLevels() {
+            const raw = document.getElementById('contourLevels').value;
+            return raw.split(',')
+                .map(s => parseFloat(s.trim()))
+                .filter(v => !isNaN(v) && v > 0 && v < 1)
+                .sort((a, b) => a - b);
         }
 
         // FIXED: Properly update grid size variable
@@ -649,7 +746,7 @@
             btn.textContent = '計算中 (0%)...';
             btn.disabled = true;
             
-            // 使用 requestAnimationFrame 让 UI 更新
+            // requestAnimationFrame を使って UI を更新
             await new Promise(resolve => setTimeout(resolve, 10));
             
             try {
@@ -658,7 +755,7 @@
                 });
             } catch (e) {
                 console.error('KDE計算失敗:', e);
-                alert('計算に失敗しました。マーク数を減らすかグリッド解像度を下げてください');
+                alert('計算に失敗しました。マーク数を減らすか、グリッド解像度を下げてください');
             }
             
             btn.textContent = originalText;
@@ -699,9 +796,14 @@
             const xStep = imgWidth / gridX;
             const yStep = imgHeight / gridY;
             
-            // 限制计算量
+            // 計算量を制限
             const maxCenters = 500;
             if (centers.length > maxCenters) {
+                console.warn(`マーク数 ${centers.length} は 500 を超えているため、500 点をランダムサンプリングして計算します`);
+                if (!confirm(`マーク数（${centers.length}）が多いため、500 個を超えた分はランダムに 500 点へサンプリングして計算します。精度に影響する可能性があります。続行しますか？`)) {
+                    if (onProgress) onProgress(100);
+                    return;
+                }
                 for (let i = centers.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [centers[i], centers[j]] = [centers[j], centers[i]];
@@ -800,7 +902,10 @@
             
             // Draw contours
             if (showContour) {
-                const levels = [0.3, 0.5, 0.7, 0.9];
+                const levels = getContourLevels();
+                if (levels.length === 0) {
+                    console.warn('有効な等高線レベルがありません');
+                }
                 for (let idx = 0; idx < levels.length; idx++) {
                     await drawSmoothContour(hctx, density, gridX, gridY, levels[idx], plotW, plotH, plotX, plotY);
                     if (onProgress) {
@@ -964,7 +1069,10 @@
             }
             
             // Draw paths with smoothing
-            ctx.strokeStyle = level >= 0.7 ? '#00ffff' : '#40a0ff';
+            const levels = getContourLevels();
+            const levelIdx = levels.indexOf(level);
+            const colors = ['#4ade80','#facc15','#fb923c','#f87171','#c084fc','#67e8f9'];
+            ctx.strokeStyle = colors[levelIdx % colors.length] || '#40a0ff';
             ctx.lineWidth = 1.5;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -1167,9 +1275,9 @@
                 link.href = document.getElementById('heatmapCanvas').toDataURL('image/png');
                 link.click();
             } else if (type === 'data') {
-                let csv = 'ID,Center_X,Center_Y\n';
+                let csv = 'ID,Center_X,Center_Y,Width,Height\n';
                 boxes.forEach((b, i) => {
-                    csv += `${i+1},${(b.x+b.w/2).toFixed(2)},${(b.y+b.h/2).toFixed(2)}\n`;
+                    csv += `${i+1},${(b.x+b.w/2).toFixed(2)},${(b.y+b.h/2).toFixed(2)},${b.w.toFixed(2)},${b.h.toFixed(2)}\n`;
                 });
                 const blob = new Blob([csv], { type: 'text/csv' });
                 const link = document.createElement('a');
@@ -1180,7 +1288,10 @@
         }
 
         function resetAll() {
-            if (confirm('全ての内容をリセットしますか？')) location.reload();
+            if (boxes.length > 0) {
+                if (!confirm(`現在 ${boxes.length} 個のマーク枠があります。リセットするとすべて失われます。リセットしてよろしいですか？`)) return;
+            }
+            location.reload();
         }
 
         // Initialize
