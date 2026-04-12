@@ -102,7 +102,7 @@
             display: none !important;
         }
         
-        /* 画像列表 */
+        /* 图片列表 */
         #imageList {
             display: flex;
             gap: 8px;
@@ -128,7 +128,7 @@
             border-radius: 3px;
         }
         
-        /* ズーム容器 */
+        /* 缩放容器 */
         .zoom-wrapper {
             display: inline-block;
             transform-origin: top left;
@@ -200,9 +200,9 @@
                 <!-- 左侧：图像和标注 -->
                 <div class="col-span-12 lg:col-span-8">
                     <div class="glass-panel rounded-xl p-4">
-                        <!-- 画像列表 -->
+                        <!-- 图片列表 -->
                         <div id="imageList" class="mb-4 flex gap-2 overflow-x-auto pb-2 hidden">
-                            <!-- 画像缩略图将动态添加到这里 -->
+                            <!-- 图片缩略图将动态添加到这里 -->
                         </div>
 
                         <!-- 工具栏 -->
@@ -214,8 +214,11 @@
                                 <button id="deleteBtn" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition">
                                     削除モード [D]
                                 </button>
+                                <button id="undoBtn" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm hover:bg-slate-600 transition" title="直前の注釈を元に戻す (Ctrl+Z)">
+                                    元に戻す [Ctrl+Z]
+                                </button>
                                 <button id="clearBtn" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm hover:bg-slate-600 transition">
-                                    すべて削除
+                                    すべてクリア
                                 </button>
                                 <button id="addImageBtn" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm hover:bg-slate-600 transition">
                                     + 画像を追加
@@ -223,18 +226,18 @@
                             </div>
                             <div class="text-sm text-slate-400">
                                 画像 <span id="currentImageNum" class="text-cyan-400 font-bold">0</span> / <span id="totalImageNum">0</span> | 
-                                ラベル付け済み: <span id="annotationCount" class="text-cyan-400 font-bold">0</span> 個
+                                注釈済み: <span id="annotationCount" class="text-cyan-400 font-bold">0</span> 個
                             </div>
                         </div>
                         
                         <!-- 绘制提示 -->
                         <div id="drawingHint" class="hidden mb-3 px-4 py-2 bg-cyan-900/30 border border-cyan-500/30 rounded-lg text-sm text-cyan-300">
-                            クリックして頂点を追加、ダブルクリックまたは最初の点をクリックして多角形を閉じる、ESCでキャンセル
+                            クリックで頂点を追加し、ダブルクリックまたは最初の点をクリックして多角形を閉じます。ESC でキャンセル、Ctrl+Z で最後の注釈を取り消します
                         </div>
                         
                         <!-- 删除提示 -->
                         <div id="deleteHint" class="hidden mb-3 px-4 py-2 bg-red-900/30 border border-red-500/30 rounded-lg text-sm text-red-300">
-                            削除する多角形をクリック、ESCで削除モードを終了
+                            多角形をクリックすると直接削除されます（確認不要）。ESC で削除モードを終了、Ctrl+Z で元に戻せます
                         </div>
                         
                         <!-- 图像容器 -->
@@ -251,9 +254,9 @@
                             <span id="imageInfo">-</span>
                             <div class="flex items-center gap-2">
                                 <span>ズーム:</span>
-                                <button id="zoomOutBtn" class="px-2 py-1 bg-slate-700 rounded hover:bg-slate-600" title="缩小">-</button>
+                                <button id="zoomOutBtn" class="px-2 py-1 bg-slate-700 rounded hover:bg-slate-600" title="縮小">-</button>
                                 <span id="zoomLevel">100%</span>
-                                <button id="zoomInBtn" class="px-2 py-1 bg-slate-700 rounded hover:bg-slate-600" title="放大">+</button>
+                                <button id="zoomInBtn" class="px-2 py-1 bg-slate-700 rounded hover:bg-slate-600" title="拡大">+</button>
                                 <button id="resetZoomBtn" class="px-2 py-1 bg-slate-700 rounded hover:bg-slate-600 text-xs" title="リセット">リセット</button>
                             </div>
                         </div>
@@ -268,7 +271,7 @@
                         
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-sm text-slate-400 mb-2">K近傍数</label>
+                                <label class="block text-sm text-slate-400 mb-2">K 近傍数</label>
                                 <input type="range" id="kNeighbors" min="2" max="10" value="5" class="w-full">
                                 <div class="flex justify-between text-xs text-slate-500 mt-1">
                                     <span>2</span>
@@ -315,11 +318,11 @@
                                 <div id="moranIValue" class="text-2xl font-bold text-cyan-400">-</div>
                             </div>
                             <div class="stat-card rounded-lg p-3">
-                                <div class="text-xs text-slate-400">P値</div>
+                                <div class="text-xs text-slate-400">P-value</div>
                                 <div id="pValue" class="text-2xl font-bold text-cyan-400">-</div>
                             </div>
                             <div class="stat-card rounded-lg p-3">
-                                <div class="text-xs text-slate-400">Z値</div>
+                                <div class="text-xs text-slate-400">Z-score</div>
                                 <div id="zScore" class="text-xl font-bold text-slate-300">-</div>
                             </div>
                             <div class="stat-card rounded-lg p-3">
@@ -342,10 +345,10 @@
                         <button id="exportAllStatsBtn" class="w-full mt-2 px-4 py-2 rounded-lg bg-indigo-700 text-white text-sm hover:bg-indigo-600 transition">
                             すべての画像統計をエクスポート (CSV)
                         </button>
-                        <p class="text-xs text-slate-500 text-center mt-1">すべての分析済み画像の Moran's I 結果を集計</p>
+                        <p class="text-xs text-slate-500 text-center mt-1">分析済み画像すべての Moran's I 結果を集計します</p>
                     </div>
 
-                    <!-- データインポート -->
+                    <!-- 数据导入 -->
                     <div class="glass-panel rounded-xl p-4">
                         <h3 class="text-lg font-semibold text-white mb-4">データインポート</h3>
                         <div class="space-y-2">
@@ -353,18 +356,18 @@
                             <button id="importCocoBtn" class="w-full px-4 py-2 rounded-lg bg-emerald-700 text-white text-sm hover:bg-emerald-600 transition">
                                 COCO JSON をインポート
                             </button>
-                            <p class="text-xs text-slate-500 text-center">以前にエクスポートしたラベルデータをインポート</p>
+                            <p class="text-xs text-slate-500 text-center">以前にエクスポートした注釈データをインポートします</p>
                         </div>
                     </div>
 
-                    <!-- データエクスポート -->
+                    <!-- 数据导出 -->
                     <div class="glass-panel rounded-xl p-4">
                         <h3 class="text-lg font-semibold text-white mb-4">データエクスポート</h3>
                         <div class="space-y-2">
                             <button id="exportCocoBtn" class="w-full px-4 py-2 rounded-lg bg-cyan-700 text-white text-sm hover:bg-cyan-600 transition">
                                 COCO JSON をエクスポート
                             </button>
-                            <p class="text-xs text-slate-500 text-center">ラベルデータをエクスポート（Moran's I の計算は不要）</p>
+                            <p class="text-xs text-slate-500 text-center">Moran's I を計算せずに注釈データをエクスポートします</p>
                         </div>
                     </div>
                 </div>
@@ -374,14 +377,17 @@
 
     <script>
         // ==================== 全局状态 ====================
-        let images = [];  // 存储所有画像数据 {id, img, filename, width, height, polygons, moranResults}
-        let currentImageIndex = -1;  // 当前显示的画像索引
+        let images = [];  // 存储所有图片数据 {id, img, filename, width, height, polygons, moranResults}
+        let currentImageIndex = -1;  // 当前显示的图片索引
         let isDrawing = false;
         let isDeleteMode = false;
         let currentPoints = [];
-        let polygonIdCounter = 0;
-        let moranResults = null;  // 現在の画像的分析結果
+        let imageIdCounter = 0;   // 图像 ID 计数器
+        let polygonIdCounter = 0; // 多边形 ID 计数器
+        let undoStack = [];       // 撤销栈
+        let moranResults = null;  // 当前图片的分析结果
         let zoom = 1.0;
+        let lastZoomPerImage = {}; // 保存每张图的缩放级别
 
         // ==================== DOM 元素 ====================
         const fileInput = document.getElementById('fileInput');
@@ -434,7 +440,7 @@
             }
         });
 
-        // 添加更多画像按钮
+        // 添加更多图片按钮
         const addImageBtn = document.getElementById('addImageBtn');
         const imageList = document.getElementById('imageList');
         addImageBtn.addEventListener('click', () => fileInput.click());
@@ -453,13 +459,13 @@
                 imageList.classList.remove('hidden');
             }
             
-            // 加载所有画像
+            // 加载所有图片
             let loadedCount = 0;
             imageFiles.forEach((file) => {
                 loadImage(file, () => {
                     loadedCount++;
                     if (loadedCount === imageFiles.length && currentImageIndex === -1) {
-                        // 所有画像加载完成后，显示第一张
+                        // 所有图片加载完成后，显示第一张
                         switchToImage(0);
                     }
                 });
@@ -471,9 +477,9 @@
             reader.onload = (e) => {
                 const img = new Image();
                 img.onload = () => {
-                    polygonIdCounter++;
+                    imageIdCounter++;
                     const imageData = {
-                        id: polygonIdCounter,
+                        id: imageIdCounter,
                         img: img,
                         filename: file.name,
                         width: img.width,
@@ -501,7 +507,7 @@
             thumbCanvas.height = 80;
             const thumbCtx = thumbCanvas.getContext('2d');
             
-            // 等比ズーム绘制缩略图
+            // 等比缩放绘制缩略图
             const scale = Math.min(80 / imageData.width, 80 / imageData.height);
             const w = imageData.width * scale;
             const h = imageData.height * scale;
@@ -535,12 +541,13 @@
             currentImageIndex = index;
             const imgData = images[index];
             
-            // リセットズーム
-            zoom = 0.25;
-            zoomWrapper.style.transform = 'scale(0.25)';
+            // 恢复或初始化该图的缩放级别
+            zoom = lastZoomPerImage[index] !== undefined ? lastZoomPerImage[index] : 0.25;
+            zoomWrapper.style.transform = `scale(${zoom})`;
+            lastZoomPerImage[index] = zoom; // 确保初始值也被记录
             updateZoomDisplay();
             
-            // 绘制現在の画像
+            // 绘制当前图片
             canvas.width = imgData.width;
             canvas.height = imgData.height;
             ctx.drawImage(imgData.img, 0, 0);
@@ -557,7 +564,7 @@
             drawingOverlay.style.width = imgData.width + 'px';
             drawingOverlay.style.height = imgData.height + 'px';
             
-            // 渲染该画像的标注
+            // 渲染该图片的标注
             polygonSvg.innerHTML = '';
             imgData.polygons.forEach(p => renderPolygon(p));
             
@@ -568,7 +575,7 @@
             updateStats();
             updateAnalyzeButton();
             
-            // 恢复 Moran 分析結果（如果有）
+            // 恢复 Moran 分析结果（如果有）
             if (imgData.moranResults) {
                 moranResults = imgData.moranResults;
                 displayResults(moranResults);
@@ -592,7 +599,7 @@
                 }
             });
             
-            // 更新画像计数显示
+            // 更新图片计数显示
             document.getElementById('currentImageNum').textContent = currentImageIndex + 1;
         }
 
@@ -610,8 +617,8 @@
             }
         }
 
-        // ==================== ズーム控制 ====================
-        // ==================== ズーム控制 ====================
+        // ==================== 缩放控制 ====================
+        // ==================== 缩放控制 ====================
         const zoomWrapper = document.getElementById('zoomWrapper');
         
         zoomInBtn.addEventListener('click', () => setZoom(zoom * 1.2));
@@ -620,10 +627,8 @@
         
         function setZoom(newZoom) {
             zoom = Math.max(0.2, Math.min(5.0, newZoom));
-            
-            // 使用 CSS transform ズーム，保持宽高比
             zoomWrapper.style.transform = `scale(${zoom})`;
-            
+            if (currentImageIndex >= 0) lastZoomPerImage[currentImageIndex] = zoom;
             updateZoomDisplay();
         }
         
@@ -635,6 +640,25 @@
         document.addEventListener('keydown', (e) => {
             // 忽略在输入框中的按键
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+            // Ctrl+Z 撤销
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                if (!isDrawing) undoLastPolygon();
+                return;
+            }
+
+            // 方向键切换图片
+            if (e.key === 'ArrowLeft' && images.length > 1) {
+                e.preventDefault();
+                switchToImage((currentImageIndex - 1 + images.length) % images.length);
+                return;
+            }
+            if (e.key === 'ArrowRight' && images.length > 1) {
+                e.preventDefault();
+                switchToImage((currentImageIndex + 1) % images.length);
+                return;
+            }
             
             switch (e.key.toLowerCase()) {
                 case 's':
@@ -687,7 +711,7 @@
         
         function getMousePos(e) {
             const rect = canvas.getBoundingClientRect();
-            // 使用 getBoundingClientRect 自动处理ズーム后的坐标转换
+            // 使用 getBoundingClientRect 自动处理缩放后的坐标转换
             return {
                 x: (e.clientX - rect.left) * (canvas.width / rect.width),
                 y: (e.clientY - rect.top) * (canvas.height / rect.height)
@@ -768,7 +792,7 @@
                     hint.setAttribute('fill', '#10b981');
                     hint.setAttribute('font-size', '12');
                     hint.setAttribute('class', 'preview');
-                    hint.textContent = '点击闭合';
+                    hint.textContent = 'クリックして閉じる';
                     polygonSvg.appendChild(hint);
                 }
             }
@@ -789,8 +813,9 @@
                 centroid: centroid
             };
             
-            // 添加到現在の画像的标注列表
+            // 添加到当前图片的标注列表，并记录撤销快照
             images[currentImageIndex].polygons.push(polygon);
+            undoStack.push({ imageIndex: currentImageIndex, polygonId: polygon.id });
             renderPolygon(polygon);
             updateStats();
             updateThumbnailBadge(currentImageIndex);
@@ -808,14 +833,25 @@
             return Math.abs(area) / 2;
         }
         
+        // 正确的多边形几何质心（Shoelace 加权，而非顶点平均）
         function calculateCentroid(points) {
-            let cx = 0, cy = 0;
             const n = points.length;
+            let area = 0, cx = 0, cy = 0;
             for (let i = 0; i < n; i++) {
-                cx += points[i].x;
-                cy += points[i].y;
+                const j = (i + 1) % n;
+                const cross = points[i].x * points[j].y - points[j].x * points[i].y;
+                area += cross;
+                cx += (points[i].x + points[j].x) * cross;
+                cy += (points[i].y + points[j].y) * cross;
             }
-            return { x: cx / n, y: cy / n };
+            area /= 2;
+            if (Math.abs(area) < 1e-10) {
+                // 退化多边形：回退到顶点平均
+                let sx = 0, sy = 0;
+                points.forEach(p => { sx += p.x; sy += p.y; });
+                return { x: sx / n, y: sy / n };
+            }
+            return { x: cx / (6 * area), y: cy / (6 * area) };
         }
         
         function renderPolygon(polygon) {
@@ -856,19 +892,15 @@
             text.textContent = polygon.id;
             group.appendChild(text);
             
-            // 点击事件：如果在删除模式则删除，否则普通选中
+            // 点击事件：删除模式下直接删除（无需 confirm）
             group.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (isDeleteMode) {
-                    if (confirm(`ラベル # の削除を確定しますか${polygon.id}?`)) {
-                        deletePolygon(polygon.id);
-                        // 如果删除后没有多边形了，自动退出删除模式
-                        if (currentImageIndex >= 0 && images[currentImageIndex].polygons.length === 0) {
-                            exitDeleteMode();
-                        }
+                    deletePolygon(polygon.id);
+                    if (currentImageIndex >= 0 && images[currentImageIndex].polygons.length === 0) {
+                        exitDeleteMode();
                     }
                 }
-                // 非删除模式下不响应点击（或可以添加选中功能）
             });
             
             polygonSvg.appendChild(group);
@@ -881,7 +913,7 @@
         
         function deletePolygon(id) {
             if (currentImageIndex < 0) return;
-            // 从現在の画像的标注列表中删除
+            // 从当前图片的标注列表中删除
             images[currentImageIndex].polygons = images[currentImageIndex].polygons.filter(p => p.id !== id);
             const group = polygonSvg.querySelector(`g[data-id="${id}"]`);
             if (group) group.remove();
@@ -889,6 +921,21 @@
             updateThumbnailBadge(currentImageIndex);
         }
         
+        function undoLastPolygon() {
+            if (undoStack.length === 0) return;
+            const last = undoStack.pop();
+            // 只有在当前图时才能直接删，否则只从数据中移除
+            const img = images[last.imageIndex];
+            if (!img) return;
+            img.polygons = img.polygons.filter(p => p.id !== last.polygonId);
+            if (last.imageIndex === currentImageIndex) {
+                const group = polygonSvg.querySelector(`g[data-id="${last.polygonId}"]`);
+                if (group) group.remove();
+                updateStats();
+                updateThumbnailBadge(last.imageIndex);
+            }
+        }
+
         // ==================== 删除模式 ====================
         deleteBtn.addEventListener('click', toggleDeleteMode);
         
@@ -901,38 +948,13 @@
         }
         
         function enterDeleteMode() {
-            // 如果正在绘制，先停止
-            if (isDrawing) {
-                stopDrawing();
-            }
-            
+            if (isDrawing) stopDrawing();
             isDeleteMode = true;
             deleteHint.classList.remove('hidden');
             deleteBtn.classList.add('ring-2', 'ring-white', 'scale-105');
             polygonSvg.classList.add('delete-active', 'delete-mode');
-            
-            // 为所有现有多边形添加点击删除事件
-            const groups = polygonSvg.querySelectorAll('.polygon-group');
-            groups.forEach(group => {
-                // 移除旧的点击事件（如果有）
-                const newGroup = group.cloneNode(true);
-                group.parentNode.replaceChild(newGroup, group);
-                
-                // 添加新的点击删除事件
-                newGroup.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const id = parseInt(newGroup.getAttribute('data-id'));
-                    if (confirm(`ラベル # の削除を確定しますか${id}?`)) {
-                        deletePolygon(id);
-                        // 如果删除后没有多边形了，自动退出删除模式
-                        if (currentImageIndex >= 0 && images[currentImageIndex].polygons.length === 0) {
-                            exitDeleteMode();
-                        }
-                    }
-                });
-            });
-            
-            // 绑定 ESC 键退出
+            // 委托：SVG 层统一监听点击，isDeleteMode 标志控制行为
+            // 不再 cloneNode，避免重复绑定
             document.addEventListener('keydown', handleDeleteKey);
         }
         
@@ -950,11 +972,15 @@
             }
         }
         
+        document.getElementById('undoBtn').addEventListener('click', () => {
+            if (!isDrawing) undoLastPolygon();
+        });
+
         clearBtn.addEventListener('click', () => {
             if (currentImageIndex < 0) return;
             const currentPolygons = images[currentImageIndex].polygons;
             if (currentPolygons.length === 0) return;
-            if (confirm(`現在の画像のすべてのラベルをクリア ${currentPolygons.length} 個のラベルを削除しますか？`)) {
+            if (confirm(`現在の画像にある ${currentPolygons.length} 個の注釈をすべて削除しますか？`)) {
                 images[currentImageIndex].polygons = [];
                 polygonSvg.innerHTML = '';
                 updateStats();
@@ -989,13 +1015,13 @@
         
         function runMoranAnalysis() {
             if (currentImageIndex < 0) {
-                alert('画像を選択してください');
+                alert('先に画像を選択してください');
                 return;
             }
             
             const currentPolygons = images[currentImageIndex].polygons;
             if (currentPolygons.length < 3) {
-                alert('少なくとも3つのラベル付きポイントが必要です');
+                alert('少なくとも 3 つの注釈点が必要です');
                 return;
             }
             
@@ -1014,10 +1040,13 @@
                 values = values.map(v => Math.log(v + 1));
             }
             
-            const weights = buildKNNWeights(points, k);
+            // 预计算距离矩阵，供 buildKNNWeights 使用
+            const distMat = buildDistMatrix(points);
+            const weights = buildKNNWeights(points, k, distMat);
             const result = calculateMoranI(values, weights);
             const permResult = permutationTest(values, weights, result.I, permutations);
-            const quadrants = calculateQuadrants(values, weights);
+            // 复用已计算的 z 和 spatialLag，避免重复计算
+            const quadrants = calculateQuadrants(result.z, result.spatialLag);
             
             moranResults = {
                 ...result,
@@ -1027,24 +1056,42 @@
                 points
             };
             
-            // 保存到現在の画像对象
+            // 保存到当前图片对象
             images[currentImageIndex].moranResults = moranResults;
             
             displayResults(moranResults);
         }
         
-        function buildKNNWeights(points, k) {
+        // 预计算距离矩阵，避免 buildKNNWeights 重复计算点对距离
+        function buildDistMatrix(points) {
             const n = points.length;
+            const mat = new Float64Array(n * n);
+            for (let i = 0; i < n; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    const d = Math.sqrt(
+                        (points[i].x - points[j].x) ** 2 +
+                        (points[i].y - points[j].y) ** 2
+                    );
+                    mat[i * n + j] = d;
+                    mat[j * n + i] = d;
+                }
+            }
+            return mat;
+        }
+
+        function buildKNNWeights(points, k, distMat) {
+            const n = points.length;
+            // 如果没传距离矩阵则现算
+            if (!distMat) distMat = buildDistMatrix(points);
             const weights = Array(n).fill(null).map(() => Array(n).fill(0));
             
             for (let i = 0; i < n; i++) {
-                const distances = points.map((p, j) => ({
-                    idx: j,
-                    dist: Math.sqrt(Math.pow(p.x - points[i].x, 2) + Math.pow(p.y - points[i].y, 2))
-                }));
-                
-                distances.sort((a, b) => a.dist - b.dist);
-                const kNearest = distances.slice(1, k + 1);
+                const row = [];
+                for (let j = 0; j < n; j++) {
+                    if (i !== j) row.push({ idx: j, dist: distMat[i * n + j] });
+                }
+                row.sort((a, b) => a.dist - b.dist);
+                const kNearest = row.slice(0, k);
                 
                 const weight = 1.0 / kNearest.length;
                 kNearest.forEach(neighbor => {
@@ -1097,53 +1144,58 @@
             return { slope, intercept };
         }
         
+        // 轻量版 I 值计算，供置换检验使用（不算 regression，速度更快）
+        function computeIFast(z, weights) {
+            const n = z.length;
+            let num = 0, den = 0;
+            for (let i = 0; i < n; i++) {
+                let lag = 0;
+                for (let j = 0; j < n; j++) lag += weights[i][j] * z[j];
+                num += z[i] * lag;
+                den += z[i] * z[i];
+            }
+            return den !== 0 ? num / den : 0;
+        }
+
         function permutationTest(values, weights, observedI, permutations) {
             const n = values.length;
+            const mean = values.reduce((a, b) => a + b, 0) / n;
+            // 预计算标准化偏差，置换时只需 shuffle z
+            const zBase = values.map(v => v - mean);
+
             let countExtreme = 0;
             const permutedI = [];
-            
+            const shuffledZ = [...zBase];
+
             for (let p = 0; p < permutations; p++) {
-                const shuffled = [...values];
+                // Fisher-Yates shuffle
                 for (let i = n - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    [shuffledZ[i], shuffledZ[j]] = [shuffledZ[j], shuffledZ[i]];
                 }
-                
-                const result = calculateMoranI(shuffled, weights);
-                permutedI.push(result.I);
-                
-                if (Math.abs(result.I) >= Math.abs(observedI)) {
-                    countExtreme++;
-                }
+                const pI = computeIFast(shuffledZ, weights);
+                permutedI.push(pI);
+                if (Math.abs(pI) >= Math.abs(observedI)) countExtreme++;
             }
-            
+
             const pValue = (countExtreme + 1) / (permutations + 1);
             const meanPerm = permutedI.reduce((a, b) => a + b, 0) / permutations;
-            const variance = permutedI.reduce((sum, val) => sum + Math.pow(val - meanPerm, 2), 0) / permutations;
+            const variance = permutedI.reduce((sum, v) => sum + (v - meanPerm) ** 2, 0) / permutations;
             const stdPerm = Math.sqrt(variance);
             const zScore = stdPerm > 0 ? (observedI - meanPerm) / stdPerm : 0;
-            
+
             return { pValue, zScore };
         }
         
-        function calculateQuadrants(values, weights) {
-            const n = values.length;
-            const mean = values.reduce((a, b) => a + b, 0) / n;
-            const z = values.map(v => v - mean);
-            
-            const spatialLag = z.map((zi, i) => {
-                return weights[i].reduce((sum, w, j) => sum + w * z[j], 0);
-            });
-            
+        // 复用已计算好的 z 和 spatialLag，避免重复运算
+        function calculateQuadrants(z, spatialLag) {
             const quads = { HH: 0, HL: 0, LH: 0, LL: 0 };
-            
-            for (let i = 0; i < n; i++) {
-                if (z[i] > 0 && spatialLag[i] > 0) quads.HH++;
+            for (let i = 0; i < z.length; i++) {
+                if (z[i] > 0 && spatialLag[i] > 0)       quads.HH++;
                 else if (z[i] > 0 && spatialLag[i] <= 0) quads.HL++;
                 else if (z[i] <= 0 && spatialLag[i] > 0) quads.LH++;
-                else quads.LL++;
+                else                                       quads.LL++;
             }
-            
             return quads;
         }
         
@@ -1157,7 +1209,7 @@
             let pattern, patternColor;
             if (result.pValue < 0.05) {
                 if (result.I > 0) {
-                    pattern = '集分布';
+                    pattern = '集積分布';
                     patternColor = 'text-red-400';
                 } else {
                     pattern = '分散分布';
@@ -1283,10 +1335,10 @@
                 csv += `${p.id},${p.centroid.x.toFixed(2)},${p.centroid.y.toFixed(2)},${x_um.toFixed(2)},${y_um.toFixed(2)},${p.area.toFixed(2)},${area_um2.toFixed(2)},${z.toFixed(4)},${lag.toFixed(4)},${quadrant}\n`;
             });
             
-            csv += '\nMoran I 分析結果\n';
+            csv += '\nMoran I 分析结果\n';
             csv += `Moran I,${moranResults.I.toFixed(4)}\n`;
-            csv += `P値,${moranResults.pValue.toFixed(4)}\n`;
-            csv += `Z値,${moranResults.zScore.toFixed(4)}\n`;
+            csv += `P-value,${moranResults.pValue.toFixed(4)}\n`;
+            csv += `Z-score,${moranResults.zScore.toFixed(4)}\n`;
             csv += `Quadrants,HH:${moranResults.quadrants.HH} HL:${moranResults.quadrants.HL} LH:${moranResults.quadrants.LH} LL:${moranResults.quadrants.LL}\n`;
             
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1301,18 +1353,18 @@
         exportAllStatsBtn.addEventListener('click', exportAllStats);
         
         function exportAllStats() {
-            // 找出所有已分析的画像
+            // 找出所有已分析的图片
             const analyzedImages = images.filter(img => img.moranResults);
             
             if (analyzedImages.length === 0) {
-                alert('エクスポートする分析済み画像データがありません');
+                alert('エクスポート可能な分析済み画像データがありません');
                 return;
             }
             
             const scale = parseFloat(document.getElementById('scaleInput').value);
             
             // CSV 头部
-            let csv = 'ファイル名,画像番号,ラベル数,Moran_I,P_value,Z_score,パターン,HH数,HL数,LH数,LL数,平均面積_um2,総面積_um2,分析日\n';
+            let csv = 'Filename,Image_Index,Annotation_Count,Moran_I,P_value,Z_score,Pattern,HH_Count,HL_Count,LH_Count,LL_Count,Mean_Area_um2,Total_Area_um2,Analysis_Date\n';
             
             analyzedImages.forEach((img, idx) => {
                 const result = img.moranResults;
@@ -1323,7 +1375,7 @@
                 const meanArea = areas.reduce((a, b) => a + b, 0) / areas.length;
                 const totalArea = areas.reduce((a, b) => a + b, 0);
                 
-                // 判断空間パターン
+                // 判断空间模式
                 let pattern = 'Random';
                 if (result.pValue < 0.05) {
                     pattern = result.I > 0 ? 'Clustered' : 'Dispersed';
@@ -1334,14 +1386,14 @@
             });
             
             // 添加汇总信息
-            csv += '\nサマリー\n';
-            csv += `分析済み画像総数,${analyzedImages.length}\n`;
-            csv += `画像総数,${images.length}\n`;
-            csv += `集分布画像数,${analyzedImages.filter(img => img.moranResults.pValue < 0.05 && img.moranResults.I > 0).length}\n`;
-            csv += `分散分布画像数,${analyzedImages.filter(img => img.moranResults.pValue < 0.05 && img.moranResults.I < 0).length}\n`;
-            csv += `ランダム分布画像数,${analyzedImages.filter(img => img.moranResults.pValue >= 0.05).length}\n`;
-            csv += `平均 Moran's I,${(analyzedImages.reduce((sum, img) => sum + img.moranResults.I, 0) / analyzedImages.length).toFixed(4)}\n`;
-            csv += `平均 P値,${(analyzedImages.reduce((sum, img) => sum + img.moranResults.pValue, 0) / analyzedImages.length).toFixed(4)}\n`;
+            csv += '\nSummary\n';
+            csv += `Total Images Analyzed,${analyzedImages.length}\n`;
+            csv += `Total Images,${images.length}\n`;
+            csv += `Clustered Images,${analyzedImages.filter(img => img.moranResults.pValue < 0.05 && img.moranResults.I > 0).length}\n`;
+            csv += `Dispersed Images,${analyzedImages.filter(img => img.moranResults.pValue < 0.05 && img.moranResults.I < 0).length}\n`;
+            csv += `Random Images,${analyzedImages.filter(img => img.moranResults.pValue >= 0.05).length}\n`;
+            csv += `Average Moran's I,${(analyzedImages.reduce((sum, img) => sum + img.moranResults.I, 0) / analyzedImages.length).toFixed(4)}\n`;
+            csv += `Average P-value,${(analyzedImages.reduce((sum, img) => sum + img.moranResults.pValue, 0) / analyzedImages.length).toFixed(4)}\n`;
             
             // 下载 CSV
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1355,11 +1407,11 @@
         exportCocoBtn.addEventListener('click', exportCocoJson);
         
         function exportCocoJson() {
-            // 检查是否有任何ラベル付け済み的画像
+            // 检查是否有任何已标注的图片
             const annotatedImages = images.filter(img => img.polygons.length > 0);
             
             if (annotatedImages.length === 0) {
-                alert('エクスポートするラベルデータがありません');
+                alert('エクスポート可能な注釈データがありません');
                 return;
             }
             
@@ -1397,7 +1449,7 @@
             
             let annotationId = 1;
             
-            // 遍历所有ラベル付け済み的画像
+            // 遍历所有已标注的图片
             annotatedImages.forEach((imgData, imgIndex) => {
                 const imageId = imgIndex + 1;
                 
@@ -1409,7 +1461,7 @@
                     file_name: imgData.filename || `image_${imageId}.jpg`
                 });
                 
-                // 添加该画像的所有标注
+                // 添加该图片的所有标注
                 imgData.polygons.forEach((p) => {
                     // 计算边界框
                     const xs = p.points.map(pt => pt.x);
@@ -1469,34 +1521,34 @@
                     const coco = JSON.parse(event.target.result);
                     importCocoData(coco);
                 } catch (err) {
-                    alert('JSON 解析错误: ' + err.message);
+                    alert('JSON 解析エラー: ' + err.message);
                 }
             };
             reader.readAsText(file);
             
-            // リセット输入框，允许重复导入同一文件
+            // 重置输入框，允许重复导入同一文件
             e.target.value = '';
         }
         
         function importCocoData(coco) {
             // 验证 COCO 格式
             if (!coco.annotations || !Array.isArray(coco.annotations)) {
-                alert('無効な COCO JSON 形式です: annotations が見つかりません');
+                alert('無効な COCO JSON 形式です: annotations がありません');
                 return;
             }
             
             if (!coco.images || !Array.isArray(coco.images) || coco.images.length === 0) {
-                alert('無効な COCO JSON 形式です: images が見つかりません');
+                alert('無効な COCO JSON 形式です: images がありません');
                 return;
             }
             
-            // 需要有画像才能导入
+            // 需要有图片才能导入
             if (images.length === 0) {
-                alert('画像をアップロードしてください');
+                alert('先に画像をアップロードしてください');
                 return;
             }
             
-            // 建立画像名到現在の画像索引的映射
+            // 建立图片名到当前图片索引的映射
             const imageNameToIndex = {};
             images.forEach((img, idx) => {
                 const baseName = img.filename ? img.filename.replace(/\.[^/.]+$/, '') : '';
@@ -1508,12 +1560,12 @@
             let matchedImages = 0;
             const unmatchedImages = [];
             
-            // 遍历 JSON 中的每张画像
+            // 遍历 JSON 中的每张图片
             coco.images.forEach((cocoImg) => {
                 const jsonFileName = cocoImg.file_name || '';
                 const jsonBaseName = jsonFileName.replace(/\.[^/.]+$/, '');
                 
-                // 查找匹配的画像
+                // 查找匹配的图片
                 const targetIndex = imageNameToIndex[jsonBaseName];
                 
                 if (targetIndex === undefined) {
@@ -1524,15 +1576,15 @@
                 matchedImages++;
                 const targetImg = images[targetIndex];
                 
-                // 清空该画像现有标注（如果有）
+                // 清空该图片现有标注（如果有）
                 if (targetImg.polygons.length > 0) {
                     targetImg.polygons = [];
                 }
                 
-                // 找到该画像的所有标注
+                // 找到该图片的所有标注
                 const imgAnnotations = coco.annotations.filter(a => a.image_id === cocoImg.id);
                 
-                // 导入该画像的标注
+                // 导入该图片的标注
                 imgAnnotations.forEach((anno) => {
                     // 检查 segmentation 格式
                     if (!anno.segmentation || !Array.isArray(anno.segmentation) || anno.segmentation.length === 0) {
@@ -1585,13 +1637,13 @@
             // 显示导入结果
             let message = `インポート完了！\n\n`;
             message += `一致した画像: ${matchedImages}/${coco.images.length}\n`;
-            message += `インポートしたラベル: ${totalImported} 個\n`;
+            message += `インポートした注釈: ${totalImported} 個\n`;
             
             if (unmatchedImages.length > 0) {
-                message += `\n一致しなかった画像 (${unmatchedImages.length}個):\n`;
+                message += `\n一致しなかった画像 (${unmatchedImages.length} 個):\n`;
                 message += unmatchedImages.slice(0, 5).join('\n');
                 if (unmatchedImages.length > 5) {
-                    message += `\n...还有 ${unmatchedImages.length - 5} 個`;
+                    message += `\n...ほか ${unmatchedImages.length - 5} 個`;
                 }
             }
             
