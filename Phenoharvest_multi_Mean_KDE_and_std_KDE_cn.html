@@ -69,6 +69,37 @@
             opacity: 1;
         }
         
+        .box-label {
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #06b6d4;
+            background: rgba(0,0,0,0.6);
+            padding: 0 3px;
+            border-radius: 3px;
+            line-height: 16px;
+            pointer-events: none;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .box-annotation.selected .box-label {
+            color: #f59e0b;
+        }
+        
+        .thumb-annotated::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 7px;
+            height: 7px;
+            background: #22c55e;
+            border-radius: 50%;
+            border: 1px solid #000;
+        }
+        
         .tool-btn {
             transition: all 0.2s;
         }
@@ -234,6 +265,10 @@
                             撤销
                         </button>
                         
+                        <button onclick="copyBoxesToAllImages()" class="tool-btn px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-medium border border-amber-500/30" title="将当前图的标注框复制到所有图像">
+                            复制到全部图
+                        </button>
+                        
                         <div class="flex-1"></div>
                         
                         <span class="text-xs text-slate-400">框数: <span id="boxCount" class="text-cyan-400 font-bold">0</span></span>
@@ -325,7 +360,19 @@
 
                         <div class="flex items-center gap-3 pt-2">
                             <input type="checkbox" id="showContour" checked class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-cyan-500">
-                            <label for="showContour" class="text-xs text-slate-300">显示等高线 (0.3, 0.5, 0.7, 0.9)</label>
+                            <label for="showContour" class="text-xs text-slate-300">显示等高线</label>
+                        </div>
+                        
+                        <div id="contourLevelsRow" class="space-y-1">
+                            <label class="text-xs text-slate-400">等高线级别（逗号分隔，0~1）</label>
+                            <input type="text" id="contourLevels" value="0.3, 0.5, 0.7, 0.9"
+                                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500">
+                        </div>
+                        
+                        <div>
+                            <button onclick="autoSetBandwidth()" class="w-full py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium text-slate-300 transition-colors border border-slate-600">
+                                🎯 自动推荐带宽 (Silverman)
+                            </button>
                         </div>
                         
                         <div class="pt-3 border-t border-slate-700/50 mt-3">
@@ -426,10 +473,12 @@
 
                 <!-- Instructions -->
                 <div class="glass-panel rounded-xl p-3 text-xs text-slate-400 space-y-1">
-                    <p><span class="text-cyan-400">•</span> 画框模式：拖拽创建检测框</p>
-                    <p><span class="text-cyan-400">•</span> 选择模式：移动或调整框大小</p>
-                    <p><span class="text-cyan-400">•</span> 带宽越小，热力图越精细尖锐</p>
-                    <p><span class="text-cyan-400">•</span> 带宽越大，热力图越平滑扩散</p>
+                    <p><span class="text-cyan-400">•</span> 画框模式：拖拽创建检测框 / 快捷键 <kbd class="bg-slate-700 px-1 rounded">D</kbd></p>
+                    <p><span class="text-cyan-400">•</span> 选择模式：移动框 / 快捷键 <kbd class="bg-slate-700 px-1 rounded">S</kbd></p>
+                    <p><span class="text-cyan-400">•</span> 撤销：<kbd class="bg-slate-700 px-1 rounded">Ctrl+Z</kbd> / 删除选中框：<kbd class="bg-slate-700 px-1 rounded">Delete</kbd></p>
+                    <p><span class="text-cyan-400">•</span> 切换图像：<kbd class="bg-slate-700 px-1 rounded">←</kbd> <kbd class="bg-slate-700 px-1 rounded">→</kbd> 方向键</p>
+                    <p><span class="text-cyan-400">•</span> 带宽越小，热力图越精细尖锐；越大越平滑</p>
+                    <p><span class="text-cyan-400">•</span> Mean KDE：多图平均密度 / Std KDE：图间变异度</p>
                 </div>
             </div>
         </div>
@@ -587,8 +636,10 @@
             
             list.innerHTML = '';
             images.forEach((imgData, index) => {
+                const hasBoxes = imgData.boxes.length > 0;
                 const thumb = document.createElement('div');
-                thumb.className = 'image-thumbnail' + (index === currentImageIndex ? ' active' : '');
+                thumb.className = 'image-thumbnail' + (index === currentImageIndex ? ' active' : '') + (hasBoxes ? ' thumb-annotated' : '');
+                thumb.title = `${imgData.filename}${hasBoxes ? ` (${imgData.boxes.length}框)` : ' (未标注)'}`;
                 thumb.innerHTML = `
                     <img src="${imgData.img.src}" alt="${imgData.filename}">
                     <span class="img-index">${index + 1}</span>
@@ -613,7 +664,7 @@
             const currentBoxes = getCurrentBoxes();
             
             // Re-create all box elements
-            currentBoxes.forEach(box => {
+            currentBoxes.forEach((box, idx) => {
                 const div = document.createElement('div');
                 div.className = 'box-annotation' + (selectedBox && selectedBox.id === box.id ? ' selected' : '');
                 div.id = `box-${box.id}`;
@@ -629,6 +680,12 @@
                 div.style.top = topPct + '%';
                 div.style.width = widthPct + '%';
                 div.style.height = heightPct + '%';
+                
+                // Box number label
+                const label = document.createElement('div');
+                label.className = 'box-label';
+                label.textContent = idx + 1;
+                div.appendChild(label);
                 
                 const delBtn = document.createElement('div');
                 delBtn.className = 'delete-btn';
@@ -704,6 +761,14 @@
                 }
                 if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBox) {
                     deleteBox(selectedBox);
+                }
+                if (e.key === 'ArrowLeft' && images.length > 1) {
+                    e.preventDefault();
+                    switchToImage((currentImageIndex - 1 + images.length) % images.length);
+                }
+                if (e.key === 'ArrowRight' && images.length > 1) {
+                    e.preventDefault();
+                    switchToImage((currentImageIndex + 1) % images.length);
                 }
             });
         }
@@ -788,6 +853,12 @@
             div.style.top = topPct + '%';
             div.style.width = widthPct + '%';
             div.style.height = heightPct + '%';
+            
+            // Box number label
+            const label = document.createElement('div');
+            label.className = 'box-label';
+            label.textContent = getCurrentBoxes().length + 1;
+            div.appendChild(label);
             
             const delBtn = document.createElement('div');
             delBtn.className = 'delete-btn';
@@ -950,6 +1021,66 @@
             document.getElementById('gridDisplay').textContent = currentGridSize + '×' + currentGridSize;
             console.log('Grid size updated to:', currentGridSize);
         }
+
+        // Silverman's rule of thumb - uses all annotated images
+        function autoSetBandwidth() {
+            const allBoxes = images.flatMap(img => img.boxes);
+            if (allBoxes.length < 2) {
+                alert('请至少在图像中标注2个框才能自动推荐带宽');
+                return;
+            }
+            const refImage = getCurrentImage() || images[0];
+            const norm = Math.max(refImage.width, refImage.height);
+            const centers = allBoxes.map(b => ({
+                x: (b.x + b.w / 2) / norm,
+                y: (b.y + b.h / 2) / norm
+            }));
+            const n = centers.length;
+            const meanX = centers.reduce((a, b) => a + b.x, 0) / n;
+            const meanY = centers.reduce((a, b) => a + b.y, 0) / n;
+            const stdX = Math.sqrt(centers.reduce((a, b) => a + (b.x - meanX) ** 2, 0) / n);
+            const stdY = Math.sqrt(centers.reduce((a, b) => a + (b.y - meanY) ** 2, 0) / n);
+            const std = (stdX + stdY) / 2;
+            const bw = Math.max(0.02, Math.min(0.5, 1.06 * std * Math.pow(n, -0.2)));
+            currentBandwidth = parseFloat(bw.toFixed(2));
+            document.getElementById('bandwidthSlider').value = currentBandwidth;
+            document.getElementById('bwDisplay').textContent = currentBandwidth.toFixed(2);
+        }
+
+        function getContourLevels() {
+            const raw = document.getElementById('contourLevels').value;
+            return raw.split(',')
+                .map(s => parseFloat(s.trim()))
+                .filter(v => !isNaN(v) && v > 0 && v < 1)
+                .sort((a, b) => a - b);
+        }
+
+        // Copy current image boxes to all images
+        function copyBoxesToAllImages() {
+            const currentBoxes = getCurrentBoxes();
+            if (currentBoxes.length === 0) {
+                alert('当前图像没有标注框');
+                return;
+            }
+            const otherCount = images.length - 1;
+            if (otherCount === 0) {
+                alert('只有一张图像，无需复制');
+                return;
+            }
+            if (!confirm(`将当前图像的 ${currentBoxes.length} 个标注框复制到其余 ${otherCount} 张图像？\n注意：将覆盖其余图像已有的标注框。`)) return;
+            
+            images.forEach((img, idx) => {
+                if (idx === currentImageIndex) return;
+                // Deep copy boxes with new IDs
+                img.boxes = currentBoxes.map(b => {
+                    boxIdCounter++;
+                    return { id: boxIdCounter, x: b.x, y: b.y, w: b.w, h: b.h, element: null, isDragging: false };
+                });
+            });
+            updateImageList();
+            updateBoxCount();
+            alert(`已复制到全部 ${otherCount} 张图像`);
+        }
         
         // Set KDE mode (mean or std)
         function setKdeMode(mode) {
@@ -999,168 +1130,6 @@
             
             btn.textContent = originalText;
             btn.disabled = false;
-        }
-
-        async function computeKDE(allBoxes, onProgress) {
-            const bandwidth = currentBandwidth;
-            const gridSize = currentGridSize;
-            const showContour = document.getElementById('showContour').checked;
-            
-            const centers = allBoxes.map(b => ({
-                x: b.x + b.w / 2,
-                y: b.y + b.h / 2
-            }));
-            
-            const outCanvas = document.getElementById('heatmapCanvas');
-            const margin = { left: 70, right: 80, top: 40, bottom: 60 };
-            
-            // Use dimensions from current image, or first image if none selected
-            const refImage = getCurrentImage() || images[0];
-            const plotW = 600;
-            const plotH = Math.round(plotW * (refImage.height / refImage.width));
-            const outWidth = plotW + margin.left + margin.right;
-            const outHeight = plotH + margin.top + margin.bottom;
-            
-            outCanvas.width = outWidth;
-            outCanvas.height = outHeight;
-            
-            const hctx = outCanvas.getContext('2d');
-            
-            // White background
-            hctx.fillStyle = 'white';
-            hctx.fillRect(0, 0, outWidth, outHeight);
-            
-            const plotX = margin.left;
-            const plotY = margin.top;
-            
-            // Use reference image dimensions
-            const refImgWidth = refImage.width;
-            const refImgHeight = refImage.height;
-            
-            const gridX = gridSize;
-            const gridY = Math.round(gridSize * (refImgHeight / refImgWidth));
-            const xStep = refImgWidth / gridX;
-            const yStep = refImgHeight / gridY;
-            
-            // 限制计算量
-            const maxCenters = 500;
-            if (centers.length > maxCenters) {
-                for (let i = centers.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [centers[i], centers[j]] = [centers[j], centers[i]];
-                }
-                centers.length = maxCenters;
-            }
-            
-            // Compute density
-            const density = [];
-            let maxVal = 0;
-            const totalCells = gridX * gridY;
-            let computedCells = 0;
-            const reportInterval = Math.max(1, Math.floor(totalCells / 20));
-            
-            for (let i = 0; i < gridX; i++) {
-                density[i] = [];
-                for (let j = 0; j < gridY; j++) {
-                    const x = i * xStep;
-                    const y = j * yStep;
-                    let val = 0;
-                    
-                    const effectiveBandwidth = bandwidth * Math.max(refImgWidth, refImgHeight);
-                    for (const c of centers) {
-                        const dx = x - c.x;
-                        const dy = y - c.y;
-                        if (Math.abs(dx) > effectiveBandwidth * 3) continue;
-                        if (Math.abs(dy) > effectiveBandwidth * 3) continue;
-                        
-                        const dist2 = (dx * dx + dy * dy) / (refImgWidth * refImgHeight);
-                        val += Math.exp(-dist2 / (2 * bandwidth * bandwidth));
-                    }
-                    
-                    val = val / (centers.length * 2 * Math.PI * bandwidth * bandwidth);
-                    density[i][j] = val;
-                    if (val > maxVal) maxVal = val;
-                    
-                    computedCells++;
-                    if (onProgress && computedCells % reportInterval === 0) {
-                        await new Promise(r => setTimeout(r, 0));
-                        onProgress((computedCells / totalCells) * 40);
-                    }
-                }
-            }
-            
-            // Normalize to 0-1
-            for (let i = 0; i < gridX; i++) {
-                for (let j = 0; j < gridY; j++) {
-                    density[i][j] /= maxVal;
-                }
-            }
-            
-            // Draw smooth heatmap using ImageData
-            const imgData = hctx.createImageData(plotW, plotH);
-            const data = imgData.data;
-            
-            for (let py = 0; py < plotH; py++) {
-                for (let px = 0; px < plotW; px++) {
-                    // Map pixel to grid
-                    const gi = (px / plotW) * (gridX - 1);
-                    const gj = (py / plotH) * (gridY - 1);
-                    
-                    // Bilinear interpolation
-                    const i0 = Math.floor(gi);
-                    const j0 = Math.floor(gj);
-                    const i1 = Math.min(i0 + 1, gridX - 1);
-                    const j1 = Math.min(j0 + 1, gridY - 1);
-                    
-                    const wi = gi - i0;
-                    const wj = gj - j0;
-                    
-                    const v00 = density[i0]?.[j0] || 0;
-                    const v10 = density[i1]?.[j0] || 0;
-                    const v01 = density[i0]?.[j1] || 0;
-                    const v11 = density[i1]?.[j1] || 0;
-                    
-                    const val = v00 * (1-wi) * (1-wj) + v10 * wi * (1-wj) + v01 * (1-wi) * wj + v11 * wi * wj;
-                    
-                    const [r, g, b] = hotColormap(val);
-                    const idx = (py * plotW + px) * 4;
-                    data[idx] = r;
-                    data[idx + 1] = g;
-                    data[idx + 2] = b;
-                    data[idx + 3] = 255;
-                }
-                
-                if (onProgress && py % 50 === 0) {
-                    await new Promise(r => setTimeout(r, 0));
-                    onProgress(40 + (py / plotH) * 20);
-                }
-            }
-            
-            hctx.putImageData(imgData, plotX, plotY);
-            
-            // Draw grid lines
-            drawGrid(hctx, plotX, plotY, plotW, plotH);
-            
-            // Draw contours
-            if (showContour) {
-                const levels = [0.3, 0.5, 0.7, 0.9];
-                for (let idx = 0; idx < levels.length; idx++) {
-                    await drawSmoothContour(hctx, density, gridX, gridY, levels[idx], plotW, plotH, plotX, plotY);
-                    if (onProgress) {
-                        onProgress(60 + ((idx + 1) / levels.length) * 20);
-                    }
-                }
-            }
-            
-            // Draw axes and colorbar
-            drawAxes(hctx, outWidth, outHeight, margin, plotW, plotH, refImgWidth, refImgHeight);
-            drawColorbar(hctx, outWidth, outHeight, margin, plotH);
-            
-            if (onProgress) onProgress(100);
-            
-            document.getElementById('resultPlaceholder').classList.add('hidden');
-            document.getElementById('heatmapContainer').classList.remove('hidden');
-            document.getElementById('downloadSection').classList.remove('hidden');
         }
 
         // Compute KDE with per-image statistics
@@ -1214,10 +1183,25 @@
                     continue;
                 }
                 
-                const centers = img.boxes.map(b => ({
-                    x: b.x + b.w / 2,
-                    y: b.y + b.h / 2
+                // Normalize centers to reference image coordinate space
+                // (handles images with different sizes)
+                const scaleX = refImgWidth / img.width;
+                const scaleY = refImgHeight / img.height;
+                let centers = img.boxes.map(b => ({
+                    x: (b.x + b.w / 2) * scaleX,
+                    y: (b.y + b.h / 2) * scaleY
                 }));
+                
+                // Limit computation, warn if sampling
+                const maxCenters = 500;
+                if (centers.length > maxCenters) {
+                    console.warn(`图像 ${img.filename}: 标注数量 ${centers.length} 超过500，随机采样500个点`);
+                    for (let i = centers.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [centers[i], centers[j]] = [centers[j], centers[i]];
+                    }
+                    centers.length = maxCenters;
+                }
                 
                 // Compute density for this image
                 let maxVal = 0;
@@ -1248,9 +1232,11 @@
                 }
                 
                 // Normalize
-                for (let i = 0; i < gridX; i++) {
-                    for (let j = 0; j < gridY; j++) {
-                        density[i][j] /= maxVal;
+                if (maxVal > 0) {
+                    for (let i = 0; i < gridX; i++) {
+                        for (let j = 0; j < gridY; j++) {
+                            density[i][j] /= maxVal;
+                        }
                     }
                 }
                 
@@ -1271,8 +1257,8 @@
                     boxCount: img.boxes.length,
                     pixelsAbove07: pixelsAbove07,
                     pixelsAbove09: pixelsAbove09,
-                    stdPixelsAbove07: 0, // Will be calculated later
-                    stdPixelsAbove09: 0, // Will be calculated later
+                    stdPixelsAbove07: 0,
+                    stdPixelsAbove09: 0,
                     totalPixels: gridX * gridY
                 });
                 
@@ -1287,9 +1273,7 @@
             const meanDensity = [];
             const stdDensity = [];
             
-            // Check if we have any density data
             if (perImageDensities.length === 0) {
-                // No images with data, create empty arrays
                 for (let i = 0; i < gridX; i++) {
                     meanDensity[i] = Array(gridY).fill(0);
                     stdDensity[i] = Array(gridY).fill(0);
@@ -1299,7 +1283,6 @@
                     meanDensity[i] = [];
                     stdDensity[i] = [];
                     for (let j = 0; j < gridY; j++) {
-                        // Calculate mean
                         let sum = 0;
                         for (let d = 0; d < perImageDensities.length; d++) {
                             sum += perImageDensities[d][i][j];
@@ -1307,56 +1290,55 @@
                         const mean = sum / perImageDensities.length;
                         meanDensity[i][j] = mean;
                         
-                        // Calculate std
                         let varianceSum = 0;
                         for (let d = 0; d < perImageDensities.length; d++) {
                             varianceSum += Math.pow(perImageDensities[d][i][j] - mean, 2);
                         }
-                        const std = Math.sqrt(varianceSum / perImageDensities.length);
-                        stdDensity[i][j] = std;
+                        stdDensity[i][j] = Math.sqrt(varianceSum / perImageDensities.length);
                     }
                 }
             }
             
-            // Find max std value for normalization
+            // Normalize std for visualization
             let maxStdVal = 0;
             for (let i = 0; i < gridX; i++) {
                 for (let j = 0; j < gridY; j++) {
                     if (stdDensity[i][j] > maxStdVal) maxStdVal = stdDensity[i][j];
                 }
             }
+            const normStdDensity = stdDensity.map(col => col.map(v => maxStdVal > 0 ? v / maxStdVal : 0));
             
-            // Calculate per-image Std KDE statistics (using normalized std values)
-            for (let imgIdx = 0; imgIdx < images.length; imgIdx++) {
-                if (perImageStats[imgIdx]) {
-                    let stdPixelsAbove07 = 0;
-                    let stdPixelsAbove09 = 0;
-                    
-                    // Count pixels where normalized std > 0.7 or 0.9
-                    for (let i = 0; i < gridX; i++) {
-                        for (let j = 0; j < gridY; j++) {
-                            const normalizedStd = maxStdVal > 0 ? stdDensity[i][j] / maxStdVal : 0;
-                            if (normalizedStd > 0.7) stdPixelsAbove07++;
-                            if (normalizedStd > 0.9) stdPixelsAbove09++;
-                        }
+            // Update per-image std stats using normalized std
+            for (let imgIdx = 0; imgIdx < perImageStats.length; imgIdx++) {
+                if (!perImageStats[imgIdx]) continue;
+                // std stats: count grid cells where normalized std > threshold
+                // (same value for all images since it's a global property)
+                let stdPixelsAbove07 = 0;
+                let stdPixelsAbove09 = 0;
+                for (let i = 0; i < gridX; i++) {
+                    for (let j = 0; j < gridY; j++) {
+                        if (normStdDensity[i][j] > 0.7) stdPixelsAbove07++;
+                        if (normStdDensity[i][j] > 0.9) stdPixelsAbove09++;
                     }
-                    
-                    perImageStats[imgIdx].stdPixelsAbove07 = stdPixelsAbove07;
-                    perImageStats[imgIdx].stdPixelsAbove09 = stdPixelsAbove09;
                 }
+                perImageStats[imgIdx].stdPixelsAbove07 = stdPixelsAbove07;
+                perImageStats[imgIdx].stdPixelsAbove09 = stdPixelsAbove09;
             }
             
             // Select density based on mode
             const isStdMode = currentKdeMode === 'std';
-            const finalDensity = isStdMode ? stdDensity : meanDensity;
+            const finalDensity = isStdMode ? normStdDensity : meanDensity;
             
-            // Normalize final density for visualization
+            // Normalize mean for visualization if needed
             let maxFinalVal = 0;
             for (let i = 0; i < gridX; i++) {
                 for (let j = 0; j < gridY; j++) {
                     if (finalDensity[i][j] > maxFinalVal) maxFinalVal = finalDensity[i][j];
                 }
             }
+            const displayDensity = maxFinalVal > 0
+                ? finalDensity.map(col => col.map(v => v / maxFinalVal))
+                : finalDensity;
             
             // Setup canvas
             const outCanvas = document.getElementById('heatmapCanvas');
@@ -1391,16 +1373,14 @@
                     const wi = gi - i0;
                     const wj = gj - j0;
                     
-                    const v00 = finalDensity[i0]?.[j0] || 0;
-                    const v10 = finalDensity[i1]?.[j0] || 0;
-                    const v01 = finalDensity[i0]?.[j1] || 0;
-                    const v11 = finalDensity[i1]?.[j1] || 0;
+                    const v00 = displayDensity[i0]?.[j0] || 0;
+                    const v10 = displayDensity[i1]?.[j0] || 0;
+                    const v01 = displayDensity[i0]?.[j1] || 0;
+                    const v11 = displayDensity[i1]?.[j1] || 0;
                     
                     const val = v00 * (1-wi) * (1-wj) + v10 * wi * (1-wj) + v01 * (1-wi) * wj + v11 * wi * wj;
                     
-                    // For std mode, use YlGnBu colormap; for mean mode, use hot colormap
-                    const normalizedVal = maxFinalVal > 0 ? val / maxFinalVal : 0;
-                    const [r, g, b] = isStdMode ? ylGnBuColormap(normalizedVal) : hotColormap(normalizedVal);
+                    const [r, g, b] = isStdMode ? ylGnBuColormap(val) : hotColormap(val);
                     const idx = (py * plotW + px) * 4;
                     data[idx] = r;
                     data[idx + 1] = g;
@@ -1415,10 +1395,10 @@
             drawGrid(hctx, plotX, plotY, plotW, plotH);
             
             if (showContour) {
-                // Adjust contour levels for std mode (std values are typically smaller)
-                const levels = isStdMode ? [0.1, 0.2, 0.3, 0.5] : [0.3, 0.5, 0.7, 0.9];
+                const levels = getContourLevels();
                 for (let idx = 0; idx < levels.length; idx++) {
-                    await drawSmoothContour(hctx, finalDensity, gridX, gridY, levels[idx], plotW, plotH, plotX, plotY);
+                    await drawSmoothContour(hctx, displayDensity, gridX, gridY, levels[idx], plotW, plotH, plotX, plotY);
+                    if (onProgress) onProgress(60 + ((idx + 1) / levels.length) * 20);
                 }
             }
             
@@ -1432,9 +1412,9 @@
             hctx.restore();
             
             drawAxes(hctx, outWidth, outHeight, margin, plotW, plotH, refImgWidth, refImgHeight);
-            
-            // Draw colorbar with appropriate label
             drawColorbar(hctx, outWidth, outHeight, margin, plotH, isStdMode);
+            
+            if (onProgress) onProgress(100);
             
             document.getElementById('resultPlaceholder').classList.add('hidden');
             document.getElementById('heatmapContainer').classList.remove('hidden');
@@ -2136,7 +2116,11 @@
         }
 
         function resetAll() {
-            if (confirm('重置所有内容？')) location.reload();
+            const totalBoxes = images.reduce((sum, img) => sum + img.boxes.length, 0);
+            if (totalBoxes > 0) {
+                if (!confirm(`当前共有 ${images.length} 张图像、${totalBoxes} 个标注框，重置后将全部丢失。确认重置？`)) return;
+            }
+            location.reload();
         }
 
         // Initialize
