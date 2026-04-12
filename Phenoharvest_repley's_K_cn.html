@@ -68,6 +68,37 @@
         .box-annotation:hover .delete-btn {
             opacity: 1;
         }
+
+        .box-label {
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #06b6d4;
+            background: rgba(0,0,0,0.6);
+            padding: 0 3px;
+            border-radius: 3px;
+            line-height: 16px;
+            pointer-events: none;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .box-annotation.selected .box-label {
+            color: #f59e0b;
+        }
+
+        .thumb-annotated::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 7px;
+            height: 7px;
+            background: #22c55e;
+            border-radius: 50%;
+            border: 1px solid #000;
+        }
         
         .tool-btn {
             transition: all 0.2s;
@@ -291,58 +322,16 @@
             <!-- Right: Controls & Output -->
             <div class="col-span-12 lg:col-span-5 space-y-3">
                 
-                <!-- KDE Parameters -->
+                <!-- Ripley's K Parameters -->
                 <div class="glass-panel rounded-xl p-4">
                     <h3 class="text-sm font-bold mb-4 flex items-center gap-2">
-                        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                         Ripley's K 参数
                     </h3>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <label class="text-xs text-slate-300">带宽 (Bandwidth)</label>
-                                <span id="bwDisplay" class="param-display text-xs">0.20</span>
-                            </div>
-                            <input type="range" id="bandwidthSlider" min="0.02" max="0.5" step="0.02" value="0.1" class="w-full" oninput="updateBandwidth(this.value)">
-                            <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
-                                <span>精细 (0.02)</span>
-                                <span>平滑 (0.5)</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <label class="text-xs text-slate-300">网格分辨率</label>
-                                <span id="gridDisplay" class="param-display text-xs">200×200</span>
-                            </div>
-                            <input type="range" id="gridSlider" min="100" max="400" step="20" value="200" class="w-full" oninput="updateGridSize(this.value)">
-                            <div class="flex justify-between text-[10px] text-slate-500 mt-0.5">
-                                <span>快速 (100)</span>
-                                <span>精细 (400)</span>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-3 pt-2">
-                            <input type="checkbox" id="showContour" checked class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-cyan-500">
-                            <label for="showContour" class="text-xs text-slate-300">显示等高线 (0.3, 0.5, 0.7, 0.9)</label>
-                        </div>
-                        
-                        <div class="pt-3 border-t border-slate-700/50 mt-3">
-                            <label class="text-xs text-slate-300 block mb-2">分析模式</label>
-                            <div class="flex gap-2">
-                                <button id="ripleyModeBtn" onclick="setAnalysisMode('ripley')" class="flex-1 py-2 rounded-lg bg-amber-600 text-white text-xs font-medium transition-colors">
-                                    Ripley's K
-                                </button>
-                            </div>
-                            <div class="text-[10px] text-slate-500 mt-1">
-                                空间点模式分析 (聚集/规则/随机)
-                            </div>
-                        </div>
-                    </div>
+                    <div class="text-[10px] text-slate-500 mb-3">空间点模式分析 (聚集/规则/随机)</div>
 
                     <!-- Ripley's K 参数设置 -->
-                    <div id="ripleyParams" class="mt-4 pt-4 border-t border-slate-700/50 space-y-3">
+                    <div id="ripleyParams" class="space-y-3">
                         <h4 class="text-xs font-bold text-amber-400">Ripley's K 参数</h4>
                         
                         <div>
@@ -490,10 +479,12 @@
 
                 <!-- Instructions -->
                 <div class="glass-panel rounded-xl p-3 text-xs text-slate-400 space-y-1">
-                    <p><span class="text-cyan-400">•</span> 画框模式：拖拽创建检测框</p>
-                    <p><span class="text-cyan-400">•</span> 选择模式：移动或调整框大小</p>
-                    <p><span class="text-cyan-400">•</span> 带宽越小，热力图越精细尖锐</p>
-                    <p><span class="text-cyan-400">•</span> 带宽越大，热力图越平滑扩散</p>
+                    <p><span class="text-amber-400">•</span> 画框模式：拖拽创建检测框 / 快捷键 <kbd class="bg-slate-700 px-1 rounded">D</kbd></p>
+                    <p><span class="text-amber-400">•</span> 选择模式：移动框 / 快捷键 <kbd class="bg-slate-700 px-1 rounded">S</kbd></p>
+                    <p><span class="text-amber-400">•</span> 撤销：<kbd class="bg-slate-700 px-1 rounded">Ctrl+Z</kbd> / 删除选中：<kbd class="bg-slate-700 px-1 rounded">Delete</kbd></p>
+                    <p><span class="text-amber-400">•</span> 切换图像：<kbd class="bg-slate-700 px-1 rounded">←</kbd> <kbd class="bg-slate-700 px-1 rounded">→</kbd> 方向键</p>
+                    <p><span class="text-amber-400">•</span> 每张图至少需要 5 个标注点才能参与分析</p>
+                    <p><span class="text-amber-400">•</span> L(d) &gt; 0 聚集 / L(d) &lt; 0 规则分布 / L(d) ≈ 0 随机</p>
                 </div>
             </div>
         </div>
@@ -512,16 +503,9 @@
         let boxIdCounter = 0;
         let imageIdCounter = 0;
         
-        // Current parameter values - STORED IN VARIABLES
-        let currentBandwidth = 0.1;
-        let currentGridSize = 200;
-        let currentKdeMode = 'mean'; // 'mean' or 'std'
-        
         // Ripley's K analysis parameters
         let ripleyConfig = {
             pixelScale: 0.675,      // μm/pixel
-            imageWidth: 2880,       // pixels
-            imageHeight: 2048,      // pixels
             maxDistance: 300,       // μm
             nDistances: 50,         // number of distance bins
             nSimulations: 399,      // CSR simulation count
@@ -659,19 +643,16 @@
         function updateImageList() {
             const container = document.getElementById('imageListContainer');
             const list = document.getElementById('imageList');
-            
-            if (images.length > 1) {
-                container.classList.remove('hidden');
-            }
-            
+            if (images.length > 1) container.classList.remove('hidden');
             list.innerHTML = '';
             images.forEach((imgData, index) => {
+                const hasBoxes = imgData.boxes.length > 0;
                 const thumb = document.createElement('div');
-                thumb.className = 'image-thumbnail' + (index === currentImageIndex ? ' active' : '');
-                thumb.innerHTML = `
-                    <img src="${imgData.img.src}" alt="${imgData.filename}">
-                    <span class="img-index">${index + 1}</span>
-                `;
+                thumb.className = 'image-thumbnail'
+                    + (index === currentImageIndex ? ' active' : '')
+                    + (hasBoxes ? ' thumb-annotated' : '');
+                thumb.title = `${imgData.filename}${hasBoxes ? ` (${imgData.boxes.length}框)` : ' (未标注)'}`;
+                thumb.innerHTML = `<img src="${imgData.img.src}" alt="${imgData.filename}"><span class="img-index">${index + 1}</span>`;
                 thumb.onclick = () => switchToImage(index);
                 list.appendChild(thumb);
             });
@@ -685,30 +666,23 @@
         }
 
         function renderBoxesForCurrentImage() {
-            // Clear annotation layer
             annotationLayer.innerHTML = '';
-            
-            // Get current image boxes
             const currentBoxes = getCurrentBoxes();
-            
-            // Re-create all box elements
-            currentBoxes.forEach(box => {
+            currentBoxes.forEach((box, idx) => {
                 const div = document.createElement('div');
                 div.className = 'box-annotation' + (selectedBox && selectedBox.id === box.id ? ' selected' : '');
                 div.id = `box-${box.id}`;
                 div.dataset.boxId = box.id;
-                
                 const imgData = getCurrentImage();
-                const leftPct = (box.x / imgData.width) * 100;
-                const topPct = (box.y / imgData.height) * 100;
-                const widthPct = (box.w / imgData.width) * 100;
-                const heightPct = (box.h / imgData.height) * 100;
-                
-                div.style.left = leftPct + '%';
-                div.style.top = topPct + '%';
-                div.style.width = widthPct + '%';
-                div.style.height = heightPct + '%';
-                
+                div.style.left   = (box.x / imgData.width  * 100) + '%';
+                div.style.top    = (box.y / imgData.height * 100) + '%';
+                div.style.width  = (box.w / imgData.width  * 100) + '%';
+                div.style.height = (box.h / imgData.height * 100) + '%';
+                // Box number label
+                const label = document.createElement('div');
+                label.className = 'box-label';
+                label.textContent = idx + 1;
+                div.appendChild(label);
                 const delBtn = document.createElement('div');
                 delBtn.className = 'delete-btn';
                 delBtn.innerHTML = '×';
@@ -716,18 +690,15 @@
                     e.preventDefault();
                     e.stopPropagation();
                     const boxId = parseInt(div.dataset.boxId);
-                    const currentBoxes = getCurrentBoxes();
-                    const box = currentBoxes.find(b => b.id === boxId);
+                    const box = getCurrentBoxes().find(b => b.id === boxId);
                     if (box) deleteBox(box);
                 };
                 div.appendChild(delBtn);
-                
                 div.addEventListener('mousedown', (e) => {
                     if (currentMode === 'select') {
                         e.preventDefault();
                         const boxId = parseInt(div.dataset.boxId);
-                        const currentBoxes = getCurrentBoxes();
-                        const box = currentBoxes.find(b => b.id === boxId);
+                        const box = getCurrentBoxes().find(b => b.id === boxId);
                         if (box) {
                             selectBox(box);
                             box.isDragging = true;
@@ -736,7 +707,6 @@
                         }
                     }
                 });
-                
                 annotationLayer.appendChild(div);
                 box.element = div;
             });
@@ -783,6 +753,14 @@
                 }
                 if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBox) {
                     deleteBox(selectedBox);
+                }
+                if (e.key === 'ArrowLeft' && images.length > 1) {
+                    e.preventDefault();
+                    switchToImage((currentImageIndex - 1 + images.length) % images.length);
+                }
+                if (e.key === 'ArrowRight' && images.length > 1) {
+                    e.preventDefault();
+                    switchToImage((currentImageIndex + 1) % images.length);
                 }
             });
         }
@@ -867,7 +845,13 @@
             div.style.top = topPct + '%';
             div.style.width = widthPct + '%';
             div.style.height = heightPct + '%';
-            
+
+            // Box number label
+            const label = document.createElement('div');
+            label.className = 'box-label';
+            label.textContent = getCurrentBoxes().length + 1;
+            div.appendChild(label);
+
             const delBtn = document.createElement('div');
             delBtn.className = 'delete-btn';
             delBtn.innerHTML = '×';
@@ -1016,20 +1000,6 @@
             document.getElementById('stdDev').textContent = Math.sqrt(variance).toFixed(1);
         }
 
-        // FIXED: Properly update bandwidth variable
-        function updateBandwidth(val) {
-            currentBandwidth = parseFloat(val);
-            document.getElementById('bwDisplay').textContent = currentBandwidth.toFixed(2);
-            console.log('Bandwidth updated to:', currentBandwidth);
-        }
-
-        // FIXED: Properly update grid size variable
-        function updateGridSize(val) {
-            currentGridSize = parseInt(val);
-            document.getElementById('gridDisplay').textContent = currentGridSize + '×' + currentGridSize;
-            console.log('Grid size updated to:', currentGridSize);
-        }
-        
         // Ripley's K parameter update functions
         function updateMaxDist(val) {
             ripleyConfig.maxDistance = parseInt(val);
@@ -1069,10 +1039,7 @@
                 const heightUm = (refImg.height * newScale).toFixed(0);
                 document.getElementById('actualImageSize').textContent = `${widthUm} × ${heightUm} μm`;
             } else {
-                // Default size based on config
-                const widthUm = (ripleyConfig.imageWidth * newScale).toFixed(0);
-                const heightUm = (ripleyConfig.imageHeight * newScale).toFixed(0);
-                document.getElementById('actualImageSize').textContent = `${widthUm} × ${heightUm} μm`;
+                document.getElementById('actualImageSize').textContent = '加载图像后显示';
             }
             
             // Show success message
@@ -1101,27 +1068,7 @@
             }
         }
         
-        function setAnalysisMode(mode) {
-            console.log('Analysis mode set to:', mode);
-        }
-        
-        // Set KDE mode (mean or std)
-        function setKdeMode(mode) {
-            currentKdeMode = mode;
-            document.getElementById('meanKdeBtn').className = mode === 'mean' 
-                ? 'flex-1 py-2 rounded-lg bg-cyan-600 text-white text-xs font-medium transition-colors'
-                : 'flex-1 py-2 rounded-lg bg-slate-700 text-slate-300 text-xs font-medium transition-colors hover:bg-slate-600';
-            document.getElementById('stdKdeBtn').className = mode === 'std'
-                ? 'flex-1 py-2 rounded-lg bg-purple-600 text-white text-xs font-medium transition-colors'
-                : 'flex-1 py-2 rounded-lg bg-slate-700 text-slate-300 text-xs font-medium transition-colors hover:bg-slate-600';
-            document.getElementById('kdeModeDesc').textContent = mode === 'mean' 
-                ? 'Mean: 平均密度分布（显示所有图像的密度平均）'
-                : 'Std: 标准差分布（显示密度的变异程度）';
-            console.log('KDE mode set to:', mode);
-        }
-
         // Global variable to store per-image statistics
-        let lastKDEStats = [];
         let lastRipleyResults = null;
 
         // ==================== Ripley's K Analysis ====================
@@ -1130,38 +1077,51 @@
         function distance(p1, p2) {
             return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
         }
-        
-        // Calculate edge correction weight for a point
-        function calculateEdgeWeight(point, d, bounds) {
-            const { xmin, xmax, ymin, ymax } = bounds;
-            let weight = 1.0;
-            
-            if (d > 0) {
-                const bufferFactors = [];
-                const distances = [
-                    point.x - xmin,      // left
-                    xmax - point.x,      // right
-                    point.y - ymin,      // bottom
-                    ymax - point.y       // top
-                ];
-                
-                for (const dist of distances) {
-                    if (dist < d) {
-                        const theta = Math.acos(Math.min(1, Math.max(-1, dist / d)));
-                        const factor = theta / Math.PI;
-                        bufferFactors.push(factor);
-                    }
-                }
-                
-                if (bufferFactors.length > 0) {
-                    weight = Math.max(0.1, 1 - bufferFactors.reduce((a, b) => a + b, 0) / 4);
+
+        // Precompute all pairwise distances for a point set (O(n²) once)
+        function computeDistanceMatrix(points) {
+            const n = points.length;
+            const dists = new Float64Array(n * n);
+            for (let i = 0; i < n; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    const d = Math.sqrt(
+                        (points[i].x - points[j].x) ** 2 +
+                        (points[i].y - points[j].y) ** 2
+                    );
+                    dists[i * n + j] = d;
+                    dists[j * n + i] = d;
                 }
             }
+            return dists;
+        }
+
+        // Edge correction: Ripley's isotropic correction
+        // Returns the proportion of circumference of radius d centered at point that lies inside bounds
+        function calculateEdgeWeight(point, d, bounds) {
+            if (d <= 0) return 1.0;
+            const { xmin, xmax, ymin, ymax } = bounds;
+            
+            // Distances from point to each boundary
+            const dl = point.x - xmin;
+            const dr = xmax - point.x;
+            const db = point.y - ymin;
+            const dt = ymax - point.y;
+
+            // Total angle outside bounds (as fraction of 2π)
+            let outsideFraction = 0;
+            // For each boundary closer than d, compute the arc angle outside
+            if (dl < d) outsideFraction += Math.acos(Math.min(1, dl / d)) / Math.PI;
+            if (dr < d) outsideFraction += Math.acos(Math.min(1, dr / d)) / Math.PI;
+            if (db < d) outsideFraction += Math.acos(Math.min(1, db / d)) / Math.PI;
+            if (dt < d) outsideFraction += Math.acos(Math.min(1, dt / d)) / Math.PI;
+
+            // Clamp: weight can't exceed 4 (full outside) or be less than 0.1
+            const weight = Math.max(0.1, 1 - Math.min(1, outsideFraction / 2));
             return weight;
         }
         
-        // Calculate Ripley's K function
-        function ripleyKFunction(points, maxD, nDistances, area, bounds, useEdgeCorrection) {
+        // Calculate Ripley's K function using pre-computed distance matrix
+        function ripleyKFunction(points, distMatrix, maxD, nDistances, area, bounds, useEdgeCorrection) {
             const n = points.length;
             if (n < 5) return null;
             
@@ -1170,22 +1130,27 @@
                 distances.push((i / nDistances) * maxD);
             }
             
+            // Precompute edge weights per point per distance if needed
+            // (cache by point index and distance index)
             const Kvalues = [];
             
             for (const d of distances) {
                 let count = 0;
                 
-                for (let i = 0; i < n; i++) {
-                    for (let j = 0; j < n; j++) {
-                        if (i !== j) {
-                            const dist = distance(points[i], points[j]);
-                            if (dist <= d) {
-                                if (useEdgeCorrection) {
-                                    const weight = calculateEdgeWeight(points[i], d, bounds);
-                                    count += 1 / weight;
-                                } else {
-                                    count += 1;
-                                }
+                if (useEdgeCorrection) {
+                    for (let i = 0; i < n; i++) {
+                        const w = calculateEdgeWeight(points[i], d, bounds);
+                        for (let j = 0; j < n; j++) {
+                            if (i !== j && distMatrix[i * n + j] <= d) {
+                                count += 1 / w;
+                            }
+                        }
+                    }
+                } else {
+                    for (let i = 0; i < n; i++) {
+                        for (let j = 0; j < n; j++) {
+                            if (i !== j && distMatrix[i * n + j] <= d) {
+                                count++;
                             }
                         }
                     }
@@ -1236,9 +1201,8 @@
             return Math.sqrt(arr.reduce((sq, n) => sq + (n - m) ** 2, 0) / arr.length);
         }
         
-        // Get percentile from array
-        function percentile(arr, p) {
-            const sorted = [...arr].sort((a, b) => a - b);
+        // Get percentile from a PRE-SORTED array (avoids repeated sorting)
+        function percentileSorted(sorted, p) {
             const index = (p / 100) * (sorted.length - 1);
             const lower = Math.floor(index);
             const upper = Math.ceil(index);
@@ -1254,8 +1218,6 @@
                 return;
             }
             
-            console.log('Starting Ripley\'s K analysis:', imagesWithBoxes.length, 'images');
-            
             const btn = document.getElementById('generateBtn');
             const originalText = btn.textContent;
             btn.textContent = '分析中 (0%)...';
@@ -1264,13 +1226,12 @@
             await new Promise(resolve => setTimeout(resolve, 10));
             
             try {
-                // Step 1: Convert boxes to points for each image
+                // Step 1: Convert boxes to μm points for each image
                 const imageDataList = imagesWithBoxes.map(img => {
                     const points = img.boxes.map(box => ({
                         x: (box.x + box.w / 2) * ripleyConfig.pixelScale,
                         y: (box.y + box.h / 2) * ripleyConfig.pixelScale
                     }));
-                    
                     return {
                         points,
                         area: (img.width * ripleyConfig.pixelScale) * (img.height * ripleyConfig.pixelScale),
@@ -1285,33 +1246,34 @@
                     };
                 });
                 
-                // Step 2: Calculate K and L for each image
+                // Step 2: Calculate K and L for each image using pre-computed distance matrix
                 const Lcurves = [];
                 const validData = [];
                 let sharedDistances = null;
                 
                 for (let i = 0; i < imageDataList.length; i++) {
                     const data = imageDataList[i];
-                    
                     if (data.n < 5) continue;
                     
+                    // Precompute pairwise distances once per image (O(n²))
+                    const distMatrix = computeDistanceMatrix(data.points);
+                    
                     const result = ripleyKFunction(
-                        data.points,
+                        data.points, distMatrix,
                         ripleyConfig.maxDistance,
                         ripleyConfig.nDistances,
-                        data.area,
-                        data.bounds,
+                        data.area, data.bounds,
                         ripleyConfig.edgeCorrection
                     );
                     
                     if (result) {
                         const L = kToLFunction(result.distances, result.Kvalues);
                         Lcurves.push(L);
-                        validData.push(data);
+                        validData.push({ ...data, distMatrix });
                         if (!sharedDistances) sharedDistances = result.distances;
                     }
                     
-                    btn.textContent = `分析中 (${Math.round((i + 1) / imageDataList.length * 30)}%)...`;
+                    btn.textContent = `分析中 (${Math.round((i + 1) / imageDataList.length * 25)}%)...`;
                     await new Promise(r => setTimeout(r, 0));
                 }
                 
@@ -1322,7 +1284,7 @@
                     return;
                 }
                 
-                // Step 3: Calculate mean L curve
+                // Step 3: Calculate mean L curve across images
                 const nDist = sharedDistances.length;
                 const Lmean = [];
                 const Llower = [];
@@ -1331,9 +1293,14 @@
                 for (let i = 0; i < nDist; i++) {
                     const valuesAtI = Lcurves.map(L => L[i]);
                     Lmean.push(mean(valuesAtI));
-                    Llower.push(percentile(valuesAtI, 2.5));
-                    Lupper.push(percentile(valuesAtI, 97.5));
+                    // Sort once per distance index for percentiles
+                    const sorted = [...valuesAtI].sort((a, b) => a - b);
+                    Llower.push(percentileSorted(sorted, 2.5));
+                    Lupper.push(percentileSorted(sorted, 97.5));
                 }
+                
+                btn.textContent = '分析中 (30%)...';
+                await new Promise(r => setTimeout(r, 0));
                 
                 // Step 4: CSR simulations
                 const meanN = Math.round(mean(validData.map(d => d.n)));
@@ -1345,40 +1312,48 @@
                     ymax: mean(validData.map(d => d.bounds.ymax))
                 };
                 
-                const Lsimulations = [];
+                // Pre-generate all CSR point sets
                 const csrSimulations = simulateCSR(meanN, meanBounds, ripleyConfig.nSimulations);
+                
+                // Compute L for each simulation - reuse distMatrix approach
+                // Store transposed: Lsim_transposed[distIdx][simIdx] for efficient percentile
+                const LsimTransposed = Array.from({ length: nDist }, () => []);
                 
                 for (let s = 0; s < csrSimulations.length; s++) {
                     const simPoints = csrSimulations[s];
+                    const simDistMatrix = computeDistanceMatrix(simPoints);
                     const simResult = ripleyKFunction(
-                        simPoints,
+                        simPoints, simDistMatrix,
                         ripleyConfig.maxDistance,
                         ripleyConfig.nDistances,
-                        meanArea,
-                        meanBounds,
+                        meanArea, meanBounds,
                         ripleyConfig.edgeCorrection
                     );
                     
                     if (simResult) {
                         const Lsim = kToLFunction(simResult.distances, simResult.Kvalues);
-                        Lsimulations.push(Lsim);
+                        for (let di = 0; di < nDist; di++) {
+                            LsimTransposed[di].push(Lsim[di]);
+                        }
                     }
                     
-                    if (s % 50 === 0) {
-                        btn.textContent = `分析中 (${Math.round(30 + (s / csrSimulations.length) * 50)}%)...`;
+                    if (s % 20 === 0) {
+                        btn.textContent = `分析中 (${Math.round(30 + (s / csrSimulations.length) * 55)}%)...`;
                         await new Promise(r => setTimeout(r, 0));
                     }
                 }
                 
-                // Step 5: Calculate CSR confidence envelope
+                // Step 5: CSR confidence envelope - sort each distance's sim values ONCE
                 const LcsrLower = [];
                 const LcsrUpper = [];
-                
-                for (let i = 0; i < nDist; i++) {
-                    const valuesAtI = Lsimulations.map(L => L[i]);
-                    LcsrLower.push(percentile(valuesAtI, 2.5));
-                    LcsrUpper.push(percentile(valuesAtI, 97.5));
+                for (let di = 0; di < nDist; di++) {
+                    const sortedSims = LsimTransposed[di].sort((a, b) => a - b);
+                    LcsrLower.push(percentileSorted(sortedSims, 2.5));
+                    LcsrUpper.push(percentileSorted(sortedSims, 97.5));
                 }
+                
+                btn.textContent = '分析中 (88%)...';
+                await new Promise(r => setTimeout(r, 0));
                 
                 // Step 6: Pattern detection
                 const significantRegular = Lmean.map((L, i) => L < LcsrLower[i]);
@@ -1389,63 +1364,55 @@
                 const regIndices = significantRegular.map((v, i) => v ? i : -1).filter(i => i >= 0);
                 const cluIndices = significantCluster.map((v, i) => v ? i : -1).filter(i => i >= 0);
                 
-                const regRange = regIndices.length > 0 
+                const regRange = regIndices.length > 0
                     ? `${sharedDistances[regIndices[0]].toFixed(0)}-${sharedDistances[regIndices[regIndices.length - 1]].toFixed(0)} μm`
                     : 'none';
                 const cluRange = cluIndices.length > 0
                     ? `${sharedDistances[cluIndices[0]].toFixed(0)}-${sharedDistances[cluIndices[cluIndices.length - 1]].toFixed(0)} μm`
                     : 'none';
                 
-                // Calculate MNND for each image
+                // Step 7: MNND using pre-computed distance matrices
                 const mnndList = [];
                 for (const data of validData) {
                     if (data.n > 1) {
+                        const n = data.n;
                         let totalMinDist = 0;
-                        for (let i = 0; i < data.n; i++) {
+                        for (let i = 0; i < n; i++) {
                             let minDist = Infinity;
-                            for (let j = 0; j < data.n; j++) {
+                            for (let j = 0; j < n; j++) {
                                 if (i !== j) {
-                                    const dist = distance(data.points[i], data.points[j]);
-                                    minDist = Math.min(minDist, dist);
+                                    const d = data.distMatrix[i * n + j];
+                                    if (d < minDist) minDist = d;
                                 }
                             }
                             totalMinDist += minDist;
                         }
-                        mnndList.push(totalMinDist / data.n);
+                        mnndList.push(totalMinDist / n);
                     }
                 }
                 
                 const mnndMean = mnndList.length > 0 ? mean(mnndList) : NaN;
-                const mnndStd = mnndList.length > 0 ? stdDev(mnndList) : NaN;
+                const mnndStd  = mnndList.length > 0 ? stdDev(mnndList) : NaN;
                 
                 // Calculate densities
                 const densities = validData.map(d => d.n / (d.area / 1e6));
                 const densityMean = mean(densities);
-                const densityStd = stdDev(densities);
+                const densityStd  = stdDev(densities);
                 
-                // Store results
+                // Store results (strip distMatrix to save memory)
                 lastRipleyResults = {
                     distances: sharedDistances,
-                    Lmean,
-                    Llower,
-                    Lupper,
-                    LcsrLower,
-                    LcsrUpper,
+                    Lmean, Llower, Lupper,
+                    LcsrLower, LcsrUpper,
                     Lcurves,
-                    significantRegular,
-                    significantCluster,
-                    notSignificant,
-                    regRange,
-                    cluRange,
-                    mnndMean,
-                    mnndStd,
-                    densityMean,
-                    densityStd,
+                    significantRegular, significantCluster, notSignificant,
+                    regRange, cluRange,
+                    mnndMean, mnndStd,
+                    densityMean, densityStd,
                     nSamples: validData.length,
-                    validData
+                    validData: validData.map(d => ({ ...d, distMatrix: null }))
                 };
                 
-                // Render results
                 renderRipleyResults();
                 
                 document.getElementById('resultPlaceholder').classList.add('hidden');
@@ -1463,38 +1430,6 @@
             }
         }
 
-        // KDE Generation - NOW USES THE STORED VARIABLES
-        async function generateKDE() {
-            // Check each image has boxes
-            const imagesWithBoxes = images.filter(img => img.boxes.length > 0);
-            if (imagesWithBoxes.length === 0) {
-                alert('请至少标注一个区域');
-                return;
-            }
-            
-            console.log('Generating with bandwidth:', currentBandwidth, 'grid:', currentGridSize, 'images:', imagesWithBoxes.length);
-            
-            const btn = document.getElementById('generateBtn');
-            const originalText = btn.textContent;
-            btn.textContent = '计算中 (0%)...';
-            btn.disabled = true;
-            
-            // 使用 requestAnimationFrame 让 UI 更新
-            await new Promise(resolve => setTimeout(resolve, 10));
-            
-            try {
-                lastKDEStats = await computeKDEWithStats((progress) => {
-                    btn.textContent = `计算中 (${Math.round(progress)}%)...`;
-                });
-            } catch (e) {
-                console.error('KDE计算失败:', e);
-                alert('计算失败，请减少标注数量或降低网格分辨率');
-            }
-            
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-        
         // Render Ripley's K analysis results
         function renderRipleyResults() {
             if (!lastRipleyResults) return;
@@ -1710,825 +1645,6 @@
                     </div>
                 </div>
             `;
-        }
-
-        async function computeKDE(allBoxes, onProgress) {
-            const bandwidth = currentBandwidth;
-            const gridSize = currentGridSize;
-            const showContour = document.getElementById('showContour').checked;
-            
-            const centers = allBoxes.map(b => ({
-                x: b.x + b.w / 2,
-                y: b.y + b.h / 2
-            }));
-            
-            const outCanvas = document.getElementById('heatmapCanvas');
-            const margin = { left: 70, right: 80, top: 40, bottom: 60 };
-            
-            // Use dimensions from current image, or first image if none selected
-            const refImage = getCurrentImage() || images[0];
-            const plotW = 600;
-            const plotH = Math.round(plotW * (refImage.height / refImage.width));
-            const outWidth = plotW + margin.left + margin.right;
-            const outHeight = plotH + margin.top + margin.bottom;
-            
-            outCanvas.width = outWidth;
-            outCanvas.height = outHeight;
-            
-            const hctx = outCanvas.getContext('2d');
-            
-            // White background
-            hctx.fillStyle = 'white';
-            hctx.fillRect(0, 0, outWidth, outHeight);
-            
-            const plotX = margin.left;
-            const plotY = margin.top;
-            
-            // Use reference image dimensions
-            const refImgWidth = refImage.width;
-            const refImgHeight = refImage.height;
-            
-            const gridX = gridSize;
-            const gridY = Math.round(gridSize * (refImgHeight / refImgWidth));
-            const xStep = refImgWidth / gridX;
-            const yStep = refImgHeight / gridY;
-            
-            // 限制计算量
-            const maxCenters = 500;
-            if (centers.length > maxCenters) {
-                for (let i = centers.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [centers[i], centers[j]] = [centers[j], centers[i]];
-                }
-                centers.length = maxCenters;
-            }
-            
-            // Compute density
-            const density = [];
-            let maxVal = 0;
-            const totalCells = gridX * gridY;
-            let computedCells = 0;
-            const reportInterval = Math.max(1, Math.floor(totalCells / 20));
-            
-            for (let i = 0; i < gridX; i++) {
-                density[i] = [];
-                for (let j = 0; j < gridY; j++) {
-                    const x = i * xStep;
-                    const y = j * yStep;
-                    let val = 0;
-                    
-                    const effectiveBandwidth = bandwidth * Math.max(refImgWidth, refImgHeight);
-                    for (const c of centers) {
-                        const dx = x - c.x;
-                        const dy = y - c.y;
-                        if (Math.abs(dx) > effectiveBandwidth * 3) continue;
-                        if (Math.abs(dy) > effectiveBandwidth * 3) continue;
-                        
-                        const dist2 = (dx * dx + dy * dy) / (refImgWidth * refImgHeight);
-                        val += Math.exp(-dist2 / (2 * bandwidth * bandwidth));
-                    }
-                    
-                    val = val / (centers.length * 2 * Math.PI * bandwidth * bandwidth);
-                    density[i][j] = val;
-                    if (val > maxVal) maxVal = val;
-                    
-                    computedCells++;
-                    if (onProgress && computedCells % reportInterval === 0) {
-                        await new Promise(r => setTimeout(r, 0));
-                        onProgress((computedCells / totalCells) * 40);
-                    }
-                }
-            }
-            
-            // Normalize to 0-1
-            for (let i = 0; i < gridX; i++) {
-                for (let j = 0; j < gridY; j++) {
-                    density[i][j] /= maxVal;
-                }
-            }
-            
-            // Draw smooth heatmap using ImageData
-            const imgData = hctx.createImageData(plotW, plotH);
-            const data = imgData.data;
-            
-            for (let py = 0; py < plotH; py++) {
-                for (let px = 0; px < plotW; px++) {
-                    // Map pixel to grid
-                    const gi = (px / plotW) * (gridX - 1);
-                    const gj = (py / plotH) * (gridY - 1);
-                    
-                    // Bilinear interpolation
-                    const i0 = Math.floor(gi);
-                    const j0 = Math.floor(gj);
-                    const i1 = Math.min(i0 + 1, gridX - 1);
-                    const j1 = Math.min(j0 + 1, gridY - 1);
-                    
-                    const wi = gi - i0;
-                    const wj = gj - j0;
-                    
-                    const v00 = density[i0]?.[j0] || 0;
-                    const v10 = density[i1]?.[j0] || 0;
-                    const v01 = density[i0]?.[j1] || 0;
-                    const v11 = density[i1]?.[j1] || 0;
-                    
-                    const val = v00 * (1-wi) * (1-wj) + v10 * wi * (1-wj) + v01 * (1-wi) * wj + v11 * wi * wj;
-                    
-                    const [r, g, b] = hotColormap(val);
-                    const idx = (py * plotW + px) * 4;
-                    data[idx] = r;
-                    data[idx + 1] = g;
-                    data[idx + 2] = b;
-                    data[idx + 3] = 255;
-                }
-                
-                if (onProgress && py % 50 === 0) {
-                    await new Promise(r => setTimeout(r, 0));
-                    onProgress(40 + (py / plotH) * 20);
-                }
-            }
-            
-            hctx.putImageData(imgData, plotX, plotY);
-            
-            // Draw grid lines
-            drawGrid(hctx, plotX, plotY, plotW, plotH);
-            
-            // Draw contours
-            if (showContour) {
-                const levels = [0.3, 0.5, 0.7, 0.9];
-                for (let idx = 0; idx < levels.length; idx++) {
-                    await drawSmoothContour(hctx, density, gridX, gridY, levels[idx], plotW, plotH, plotX, plotY);
-                    if (onProgress) {
-                        onProgress(60 + ((idx + 1) / levels.length) * 20);
-                    }
-                }
-            }
-            
-            // Draw axes and colorbar
-            drawAxes(hctx, outWidth, outHeight, margin, plotW, plotH, refImgWidth, refImgHeight);
-            drawColorbar(hctx, outWidth, outHeight, margin, plotH);
-            
-            if (onProgress) onProgress(100);
-            
-            document.getElementById('resultPlaceholder').classList.add('hidden');
-            document.getElementById('heatmapContainer').classList.remove('hidden');
-            document.getElementById('downloadSection').classList.remove('hidden');
-        }
-
-        // Compute KDE with per-image statistics
-        async function computeKDEWithStats(onProgress) {
-            const bandwidth = currentBandwidth;
-            const gridSize = currentGridSize;
-            const showContour = document.getElementById('showContour').checked;
-            
-            // Use dimensions from current image, or first image if none selected
-            const refImage = getCurrentImage() || images[0];
-            const plotW = 600;
-            const plotH = Math.round(plotW * (refImage.height / refImage.width));
-            
-            // Use reference image dimensions
-            const refImgWidth = refImage.width;
-            const refImgHeight = refImage.height;
-            
-            const gridX = gridSize;
-            const gridY = Math.round(gridSize * (refImgHeight / refImgWidth));
-            const xStep = refImgWidth / gridX;
-            const yStep = refImgHeight / gridY;
-            
-            // Store per-image KDE densities
-            const perImageDensities = [];
-            const perImageStats = [];
-            const totalProgressSteps = images.length + 1;
-            let completedSteps = 0;
-            
-            // Calculate per-image KDE
-            for (let imgIdx = 0; imgIdx < images.length; imgIdx++) {
-                const img = images[imgIdx];
-                
-                if (img.boxes.length === 0) {
-                    // Create zero density for images with no boxes
-                    const zeroDensity = Array(gridX).fill(null).map(() => Array(gridY).fill(0));
-                    perImageDensities.push(zeroDensity);
-                    perImageStats.push({
-                        imageIndex: imgIdx + 1,
-                        filename: img.filename,
-                        boxCount: 0,
-                        pixelsAbove07: 0,
-                        pixelsAbove09: 0,
-                        stdPixelsAbove07: 0,
-                        stdPixelsAbove09: 0,
-                        totalPixels: gridX * gridY
-                    });
-                    completedSteps++;
-                    if (onProgress) {
-                        onProgress((completedSteps / totalProgressSteps) * 40);
-                    }
-                    continue;
-                }
-                
-                const centers = img.boxes.map(b => ({
-                    x: b.x + b.w / 2,
-                    y: b.y + b.h / 2
-                }));
-                
-                // Compute density for this image
-                let maxVal = 0;
-                const density = [];
-                
-                for (let i = 0; i < gridX; i++) {
-                    density[i] = [];
-                    for (let j = 0; j < gridY; j++) {
-                        const x = i * xStep;
-                        const y = j * yStep;
-                        let val = 0;
-                        
-                        const effectiveBandwidth = bandwidth * Math.max(refImgWidth, refImgHeight);
-                        for (const c of centers) {
-                            const dx = x - c.x;
-                            const dy = y - c.y;
-                            if (Math.abs(dx) > effectiveBandwidth * 3) continue;
-                            if (Math.abs(dy) > effectiveBandwidth * 3) continue;
-                            
-                            const dist2 = (dx * dx + dy * dy) / (refImgWidth * refImgHeight);
-                            val += Math.exp(-dist2 / (2 * bandwidth * bandwidth));
-                        }
-                        
-                        val = val / (centers.length * 2 * Math.PI * bandwidth * bandwidth);
-                        density[i][j] = val;
-                        if (val > maxVal) maxVal = val;
-                    }
-                }
-                
-                // Normalize
-                for (let i = 0; i < gridX; i++) {
-                    for (let j = 0; j < gridY; j++) {
-                        density[i][j] /= maxVal;
-                    }
-                }
-                
-                // Count pixels above thresholds
-                let pixelsAbove07 = 0;
-                let pixelsAbove09 = 0;
-                for (let i = 0; i < gridX; i++) {
-                    for (let j = 0; j < gridY; j++) {
-                        if (density[i][j] > 0.7) pixelsAbove07++;
-                        if (density[i][j] > 0.9) pixelsAbove09++;
-                    }
-                }
-                
-                perImageDensities.push(density);
-                perImageStats.push({
-                    imageIndex: imgIdx + 1,
-                    filename: img.filename,
-                    boxCount: img.boxes.length,
-                    pixelsAbove07: pixelsAbove07,
-                    pixelsAbove09: pixelsAbove09,
-                    stdPixelsAbove07: 0, // Will be calculated later
-                    stdPixelsAbove09: 0, // Will be calculated later
-                    totalPixels: gridX * gridY
-                });
-                
-                completedSteps++;
-                if (onProgress) {
-                    onProgress((completedSteps / totalProgressSteps) * 40);
-                    await new Promise(r => setTimeout(r, 0));
-                }
-            }
-            
-            // Calculate Mean and Std from per-image densities
-            const meanDensity = [];
-            const stdDensity = [];
-            
-            // Check if we have any density data
-            if (perImageDensities.length === 0) {
-                // No images with data, create empty arrays
-                for (let i = 0; i < gridX; i++) {
-                    meanDensity[i] = Array(gridY).fill(0);
-                    stdDensity[i] = Array(gridY).fill(0);
-                }
-            } else {
-                for (let i = 0; i < gridX; i++) {
-                    meanDensity[i] = [];
-                    stdDensity[i] = [];
-                    for (let j = 0; j < gridY; j++) {
-                        // Calculate mean
-                        let sum = 0;
-                        for (let d = 0; d < perImageDensities.length; d++) {
-                            sum += perImageDensities[d][i][j];
-                        }
-                        const mean = sum / perImageDensities.length;
-                        meanDensity[i][j] = mean;
-                        
-                        // Calculate std
-                        let varianceSum = 0;
-                        for (let d = 0; d < perImageDensities.length; d++) {
-                            varianceSum += Math.pow(perImageDensities[d][i][j] - mean, 2);
-                        }
-                        const std = Math.sqrt(varianceSum / perImageDensities.length);
-                        stdDensity[i][j] = std;
-                    }
-                }
-            }
-            
-            // Find max std value for normalization
-            let maxStdVal = 0;
-            for (let i = 0; i < gridX; i++) {
-                for (let j = 0; j < gridY; j++) {
-                    if (stdDensity[i][j] > maxStdVal) maxStdVal = stdDensity[i][j];
-                }
-            }
-            
-            // Calculate per-image Std KDE statistics (using normalized std values)
-            for (let imgIdx = 0; imgIdx < images.length; imgIdx++) {
-                if (perImageStats[imgIdx]) {
-                    let stdPixelsAbove07 = 0;
-                    let stdPixelsAbove09 = 0;
-                    
-                    // Count pixels where normalized std > 0.7 or 0.9
-                    for (let i = 0; i < gridX; i++) {
-                        for (let j = 0; j < gridY; j++) {
-                            const normalizedStd = maxStdVal > 0 ? stdDensity[i][j] / maxStdVal : 0;
-                            if (normalizedStd > 0.7) stdPixelsAbove07++;
-                            if (normalizedStd > 0.9) stdPixelsAbove09++;
-                        }
-                    }
-                    
-                    perImageStats[imgIdx].stdPixelsAbove07 = stdPixelsAbove07;
-                    perImageStats[imgIdx].stdPixelsAbove09 = stdPixelsAbove09;
-                }
-            }
-            
-            // Select density based on mode
-            const isStdMode = currentKdeMode === 'std';
-            const finalDensity = isStdMode ? stdDensity : meanDensity;
-            
-            // Normalize final density for visualization
-            let maxFinalVal = 0;
-            for (let i = 0; i < gridX; i++) {
-                for (let j = 0; j < gridY; j++) {
-                    if (finalDensity[i][j] > maxFinalVal) maxFinalVal = finalDensity[i][j];
-                }
-            }
-            
-            // Setup canvas
-            const outCanvas = document.getElementById('heatmapCanvas');
-            const margin = { left: 70, right: 80, top: 40, bottom: 60 };
-            const outWidth = plotW + margin.left + margin.right;
-            const outHeight = plotH + margin.top + margin.bottom;
-            
-            outCanvas.width = outWidth;
-            outCanvas.height = outHeight;
-            
-            const hctx = outCanvas.getContext('2d');
-            hctx.fillStyle = 'white';
-            hctx.fillRect(0, 0, outWidth, outHeight);
-            
-            const plotX = margin.left;
-            const plotY = margin.top;
-            
-            // Draw heatmap
-            const imgData = hctx.createImageData(plotW, plotH);
-            const data = imgData.data;
-            
-            for (let py = 0; py < plotH; py++) {
-                for (let px = 0; px < plotW; px++) {
-                    const gi = (px / plotW) * (gridX - 1);
-                    const gj = (py / plotH) * (gridY - 1);
-                    
-                    const i0 = Math.floor(gi);
-                    const j0 = Math.floor(gj);
-                    const i1 = Math.min(i0 + 1, gridX - 1);
-                    const j1 = Math.min(j0 + 1, gridY - 1);
-                    
-                    const wi = gi - i0;
-                    const wj = gj - j0;
-                    
-                    const v00 = finalDensity[i0]?.[j0] || 0;
-                    const v10 = finalDensity[i1]?.[j0] || 0;
-                    const v01 = finalDensity[i0]?.[j1] || 0;
-                    const v11 = finalDensity[i1]?.[j1] || 0;
-                    
-                    const val = v00 * (1-wi) * (1-wj) + v10 * wi * (1-wj) + v01 * (1-wi) * wj + v11 * wi * wj;
-                    
-                    // For std mode, use YlGnBu colormap; for mean mode, use hot colormap
-                    const normalizedVal = maxFinalVal > 0 ? val / maxFinalVal : 0;
-                    const [r, g, b] = isStdMode ? ylGnBuColormap(normalizedVal) : hotColormap(normalizedVal);
-                    const idx = (py * plotW + px) * 4;
-                    data[idx] = r;
-                    data[idx + 1] = g;
-                    data[idx + 2] = b;
-                    data[idx + 3] = 255;
-                }
-            }
-            
-            hctx.putImageData(imgData, plotX, plotY);
-            
-            // Draw grid and contours
-            drawGrid(hctx, plotX, plotY, plotW, plotH);
-            
-            if (showContour) {
-                // Adjust contour levels for std mode (std values are typically smaller)
-                const levels = isStdMode ? [0.1, 0.2, 0.3, 0.5] : [0.3, 0.5, 0.7, 0.9];
-                for (let idx = 0; idx < levels.length; idx++) {
-                    await drawSmoothContour(hctx, finalDensity, gridX, gridY, levels[idx], plotW, plotH, plotX, plotY);
-                }
-            }
-            
-            // Draw title indicating the mode
-            hctx.save();
-            hctx.font = 'bold 14px "JetBrains Mono", sans-serif';
-            hctx.fillStyle = '#333';
-            hctx.textAlign = 'center';
-            const titleText = isStdMode ? 'Std KDE (Standard Deviation)' : 'Mean KDE (Average Density)';
-            hctx.fillText(titleText, plotX + plotW / 2, 25);
-            hctx.restore();
-            
-            drawAxes(hctx, outWidth, outHeight, margin, plotW, plotH, refImgWidth, refImgHeight);
-            
-            // Draw colorbar with appropriate label
-            drawColorbar(hctx, outWidth, outHeight, margin, plotH, isStdMode);
-            
-            document.getElementById('resultPlaceholder').classList.add('hidden');
-            document.getElementById('heatmapContainer').classList.remove('hidden');
-            document.getElementById('downloadSection').classList.remove('hidden');
-            
-            return perImageStats;
-        }
-
-        // Improved hot colormap (smoother, like matplotlib)
-        function hotColormap(t) {
-            t = Math.max(0, Math.min(1, t));
-            let r, g, b;
-            
-            if (t < 0.33) {
-                // Black to red
-                const s = t / 0.33;
-                r = Math.floor(s * 255);
-                g = 0;
-                b = 0;
-            } else if (t < 0.66) {
-                // Red to yellow
-                const s = (t - 0.33) / 0.33;
-                r = 255;
-                g = Math.floor(s * 255);
-                b = 0;
-            } else {
-                // Yellow to white
-                const s = (t - 0.66) / 0.34;
-                r = 255;
-                g = 255;
-                b = Math.floor(s * 255);
-            }
-            
-            return [r, g, b];
-        }
-        
-        // YlGnBu colormap for Std KDE (White -> Yellow -> Green -> Blue)
-        function ylGnBuColormap(t) {
-            t = Math.max(0, Math.min(1, t));
-            let r, g, b;
-            
-            if (t < 0.25) {
-                // White to light yellow
-                const s = t / 0.25;
-                r = 255;
-                g = 255;
-                b = Math.floor(220 + (1 - s) * 35); // 255 -> 220
-            } else if (t < 0.5) {
-                // Light yellow to yellow-green
-                const s = (t - 0.25) / 0.25;
-                r = 255;
-                g = Math.floor(255 - s * 50); // 255 -> 205
-                b = Math.floor(220 - s * 220); // 220 -> 0
-            } else if (t < 0.75) {
-                // Yellow-green to green-blue
-                const s = (t - 0.5) / 0.25;
-                r = Math.floor(255 - s * 155); // 255 -> 100
-                g = Math.floor(205 - s * 55); // 205 -> 150
-                b = Math.floor(0 + s * 100); // 0 -> 100
-            } else {
-                // Green-blue to dark blue
-                const s = (t - 0.75) / 0.25;
-                r = Math.floor(100 - s * 100); // 100 -> 0
-                g = Math.floor(150 - s * 100); // 150 -> 50
-                b = Math.floor(100 + s * 128); // 100 -> 228
-            }
-            
-            return [r, g, b];
-        }
-        
-        // Draw grid lines
-        function drawGrid(ctx, x, y, w, h) {
-            ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
-            ctx.lineWidth = 1;
-            
-            const xTicks = 5;
-            const yTicks = 5;
-            
-            ctx.beginPath();
-            // Vertical lines
-            for (let i = 1; i < xTicks; i++) {
-                const px = x + (i / xTicks) * w;
-                ctx.moveTo(px, y);
-                ctx.lineTo(px, y + h);
-            }
-            // Horizontal lines
-            for (let i = 1; i < yTicks; i++) {
-                const py = y + (i / yTicks) * h;
-                ctx.moveTo(x, py);
-                ctx.lineTo(x + w, py);
-            }
-            ctx.stroke();
-        }
-
-        // Smooth contour drawing with path tracking
-        async function drawSmoothContour(ctx, density, gridX, gridY, level, plotW, plotH, offsetX, offsetY) {
-            const pxW = plotW / gridX;
-            const pxH = plotH / gridY;
-            
-            // Collect all contour segments with their grid positions
-            const segments = [];
-            const marginCells = 1;
-            
-            for (let i = marginCells; i < gridX - 1 - marginCells; i++) {
-                for (let j = marginCells; j < gridY - 1 - marginCells; j++) {
-                    const v00 = density[i][j];
-                    const v10 = density[i+1][j];
-                    const v01 = density[i][j+1];
-                    const v11 = density[i+1][j+1];
-                    
-                    let config = 0;
-                    if (v00 > level) config |= 8;
-                    if (v10 > level) config |= 4;
-                    if (v11 > level) config |= 2;
-                    if (v01 > level) config |= 1;
-                    
-                    if (config === 0 || config === 15) continue;
-                    
-                    const pts = [];
-                    
-                    if ((v00 <= level) !== (v10 <= level)) {
-                        const t = (level - v00) / (v10 - v00);
-                        pts.push({ x: (i + t) * pxW, y: (j + 1) * pxH, gi: i, gj: j });
-                    }
-                    if ((v10 <= level) !== (v11 <= level)) {
-                        const t = (level - v10) / (v11 - v10);
-                        pts.push({ x: (i + 1) * pxW, y: (j + t) * pxH, gi: i, gj: j });
-                    }
-                    if ((v11 <= level) !== (v01 <= level)) {
-                        const t = (level - v11) / (v01 - v11);
-                        pts.push({ x: (i + 1 - t) * pxW, y: j * pxH, gi: i, gj: j });
-                    }
-                    if ((v01 <= level) !== (v00 <= level)) {
-                        const t = (level - v01) / (v00 - v01);
-                        pts.push({ x: i * pxW, y: (j + (1-t)) * pxH, gi: i, gj: j });
-                    }
-                    
-                    if (pts.length >= 2) {
-                        segments.push([pts[0], pts[1]]);
-                    }
-                }
-            }
-            
-            if (segments.length === 0) return;
-            
-            // Connect segments into paths
-            const paths = [];
-            const used = new Set();
-            
-            for (let i = 0; i < segments.length; i++) {
-                if (used.has(i)) continue;
-                
-                const path = [segments[i][0], segments[i][1]];
-                used.add(i);
-                
-                // Extend path forward
-                let extended = true;
-                while (extended && path.length < 1000) {
-                    extended = false;
-                    const last = path[path.length - 1];
-                    
-                    for (let j = 0; j < segments.length; j++) {
-                        if (used.has(j)) continue;
-                        
-                        const [s0, s1] = segments[j];
-                        const d0 = Math.hypot(s0.x - last.x, s0.y - last.y);
-                        const d1 = Math.hypot(s1.x - last.x, s1.y - last.y);
-                        
-                        if (d0 < pxW * 1.5) {
-                            path.push(s1);
-                            used.add(j);
-                            extended = true;
-                            break;
-                        } else if (d1 < pxW * 1.5) {
-                            path.push(s0);
-                            used.add(j);
-                            extended = true;
-                            break;
-                        }
-                    }
-                }
-                
-                paths.push(path);
-            }
-            
-            // Draw paths with smoothing
-            ctx.strokeStyle = level >= 0.7 ? '#00ffff' : '#40a0ff';
-            ctx.lineWidth = 1.5;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            // Margin to avoid edge artifacts
-            const margin = Math.min(plotW, plotH) * 0.02;
-            
-            for (const path of paths) {
-                if (path.length < 3) continue;
-                
-                // Filter points near edge
-                const filtered = path.filter(p => 
-                    p.x > margin && p.x < plotW - margin &&
-                    p.y > margin && p.y < plotH - margin
-                );
-                
-                if (filtered.length < 3) continue;
-                
-                // Simplify path
-                const simplified = [filtered[0]];
-                for (let i = 1; i < filtered.length; i++) {
-                    const d = Math.hypot(filtered[i].x - simplified[simplified.length-1].x,
-                                         filtered[i].y - simplified[simplified.length-1].y);
-                    if (d > 2 || i === filtered.length - 1) {
-                        simplified.push(filtered[i]);
-                    }
-                }
-                
-                if (simplified.length < 3) continue;
-                
-                // Draw smooth curve
-                ctx.beginPath();
-                ctx.moveTo(offsetX + simplified[0].x, offsetY + simplified[0].y);
-                
-                for (let i = 1; i < simplified.length; i++) {
-                    const prev = simplified[i-1];
-                    const curr = simplified[i];
-                    const next = simplified[i+1] || curr;
-                    
-                    const cpX = (prev.x + curr.x) / 2;
-                    const cpY = (prev.y + curr.y) / 2;
-                    
-                    ctx.quadraticCurveTo(
-                        offsetX + cpX, offsetY + cpY,
-                        offsetX + curr.x, offsetY + curr.y
-                    );
-                }
-                
-                ctx.stroke();
-                
-                // Add label for longer paths
-                if (simplified.length > 20) {
-                    const midIdx = Math.floor(simplified.length / 2);
-                    const mid = simplified[midIdx];
-                    const prev = simplified[Math.max(0, midIdx - 3)];
-                    const next = simplified[Math.min(simplified.length - 1, midIdx + 3)];
-                    const angle = Math.atan2(next.y - prev.y, next.x - prev.x);
-                    
-                    ctx.save();
-                    ctx.translate(offsetX + mid.x, offsetY + mid.y);
-                    let rot = angle;
-                    if (rot > Math.PI/4) rot -= Math.PI;
-                    if (rot < -Math.PI/4) rot += Math.PI;
-                    ctx.rotate(rot);
-                    
-                    ctx.font = 'bold 11px "JetBrains Mono", monospace';
-                    const text = level.toFixed(1);
-                    const tw = ctx.measureText(text).width;
-                    
-                    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-                    ctx.fillRect(-tw/2 - 2, -7, tw + 4, 14);
-                    
-                    ctx.fillStyle = '#333';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(text, 0, 0);
-                    
-                    ctx.restore();
-                }
-            }
-        }
-
-        function drawAxes(ctx, width, height, margin, plotW, plotH, imgWidth, imgHeight) {
-            const tickLen = 6;
-            const fontSize = 12;
-            
-            const plotX = margin.left;
-            const plotY = margin.top;
-            
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 1.5;
-            ctx.fillStyle = '#333';
-            ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
-            
-            // Draw box around plot area
-            ctx.strokeRect(plotX, plotY, plotW, plotH);
-            
-            // Y axis ticks
-            const yTicks = 5;
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            for (let i = 0; i <= yTicks; i++) {
-                const y = plotY + plotH - (i / yTicks) * plotH; // 0 at bottom
-                const val = Math.round((i / yTicks) * imgHeight);
-                
-                ctx.beginPath();
-                ctx.moveTo(plotX - tickLen, y);
-                ctx.lineTo(plotX, y);
-                ctx.stroke();
-                
-                ctx.fillText(val.toString(), plotX - 10, y);
-            }
-            
-            // Y axis label - moved further left to avoid overlap
-            ctx.save();
-            ctx.translate(18, plotY + plotH / 2);
-            ctx.rotate(-Math.PI / 2);
-            ctx.textAlign = 'center';
-            ctx.font = `bold ${fontSize}px "JetBrains Mono", sans-serif`;
-            ctx.fillText('Y Position (pixels)', 0, 0);
-            ctx.restore();
-            
-            // X axis ticks
-            const xTicks = 5;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            for (let i = 0; i <= xTicks; i++) {
-                const x = plotX + (i / xTicks) * plotW;
-                const val = Math.round((i / xTicks) * imgWidth);
-                
-                ctx.beginPath();
-                ctx.moveTo(x, plotY + plotH);
-                ctx.lineTo(x, plotY + plotH + tickLen);
-                ctx.stroke();
-                
-                ctx.fillText(val.toString(), x, plotY + plotH + 8);
-            }
-            
-            // X axis label
-            ctx.font = `bold ${fontSize}px "JetBrains Mono", sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText('X Position (pixels)', plotX + plotW / 2, plotY + plotH + 30);
-        }
-        
-        function drawColorbar(ctx, width, height, margin, plotH, isStdMode = false) {
-            const cbWidth = 20;
-            const cbHeight = plotH;
-            const cbX = width - margin.right + 20;
-            const cbY = margin.top;
-            
-            // Draw color gradient
-            const steps = 100;
-            const stepH = cbHeight / steps;
-            
-            for (let i = 0; i < steps; i++) {
-                const t = 1 - (i / steps); // 1 at top, 0 at bottom
-                const [r, g, b] = isStdMode ? ylGnBuColormap(t) : hotColormap(t);
-                ctx.fillStyle = `rgb(${r},${g},${b})`;
-                ctx.fillRect(cbX, cbY + i * stepH, cbWidth, stepH + 1);
-            }
-            
-            // Draw border
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(cbX, cbY, cbWidth, cbHeight);
-            
-            // Draw ticks and labels
-            ctx.fillStyle = '#333';
-            ctx.font = '11px "JetBrains Mono", sans-serif';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            
-            // Use different tick labels for std mode
-            const ticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
-            for (const t of ticks) {
-                const y = cbY + cbHeight - t * cbHeight;
-                
-                ctx.beginPath();
-                ctx.moveTo(cbX + cbWidth, y);
-                ctx.lineTo(cbX + cbWidth + 5, y);
-                ctx.stroke();
-                
-                // Show normalized values (0-1) for both modes
-                ctx.fillText(t.toFixed(1), cbX + cbWidth + 8, y);
-            }
-            
-            // Colorbar label
-            ctx.save();
-            ctx.translate(cbX + cbWidth + 35, cbY + cbHeight / 2);
-            ctx.rotate(-Math.PI / 2);
-            ctx.textAlign = 'center';
-            ctx.font = 'bold 12px "JetBrains Mono", sans-serif';
-            const labelText = isStdMode ? 'Std Density (Normalized)' : 'Mean Density';
-            ctx.fillText(labelText, 0, 0);
-            ctx.restore();
         }
 
         // Import COCO JSON annotations
@@ -2850,15 +1966,16 @@
         }
 
         function resetAll() {
-            if (confirm('重置所有内容？')) location.reload();
+            const totalBoxes = images.reduce((sum, img) => sum + img.boxes.length, 0);
+            if (totalBoxes > 0) {
+                if (!confirm(`当前共有 ${images.length} 张图像、${totalBoxes} 个标注框，重置后将全部丢失。确认重置？`)) return;
+            }
+            location.reload();
         }
 
         // Initialize
         setMode('draw');
         setupGlobalEventListeners();
-        // Initialize displays
-        updateBandwidth(0.1);
-        updateGridSize(200);
         updateMaxDist(300);
         updateNDistances(50);
         updateNSimulations(399);
