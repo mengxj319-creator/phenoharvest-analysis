@@ -78,9 +78,9 @@ Current modules include:
 
 ### Ripley's K
 
-- `Phenoharvest_repley's_K_cn.html`
-- `Phenoharvest_repley's_K_en.html`
-- `Phenoharvest_repley's_K_ja.html`
+- `Phenoharvest_ripley's_K_cn.html`
+- `Phenoharvest_ripley's_K_en.html`
+- `Phenoharvest_ripley's_K_ja.html`
 
 ---
 
@@ -148,8 +148,8 @@ git clone https://github.com/mengxj319-creator/phenoharvest-analysis.git
 cd phenoharvest-analysis
 
 # Open any HTML file directly in your browser
-open Phenoharvest_repley's_K_en.html      # macOS
-start Phenoharvest_repley's_K_en.html     # Windows
+open Phenoharvest_ripley's_K_en.html      # macOS
+start Phenoharvest_ripley's_K_en.html     # Windows
 ```
 
 You can also simply double-click the HTML files in your file explorer.
