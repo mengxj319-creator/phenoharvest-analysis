@@ -1069,12 +1069,23 @@
             }
             if (!confirm(`将当前图像的 ${currentBoxes.length} 个标注框复制到其余 ${otherCount} 张图像？\n注意：将覆盖其余图像已有的标注框。`)) return;
             
+            const srcImg = images[currentImageIndex];
             images.forEach((img, idx) => {
                 if (idx === currentImageIndex) return;
-                // Deep copy boxes with new IDs
+                // Scale box coordinates proportionally from source to target image dimensions
+                const scaleX = img.width / srcImg.width;
+                const scaleY = img.height / srcImg.height;
                 img.boxes = currentBoxes.map(b => {
                     boxIdCounter++;
-                    return { id: boxIdCounter, x: b.x, y: b.y, w: b.w, h: b.h, element: null, isDragging: false };
+                    return {
+                        id: boxIdCounter,
+                        x: b.x * scaleX,
+                        y: b.y * scaleY,
+                        w: b.w * scaleX,
+                        h: b.h * scaleY,
+                        element: null,
+                        isDragging: false
+                    };
                 });
             });
             updateImageList();

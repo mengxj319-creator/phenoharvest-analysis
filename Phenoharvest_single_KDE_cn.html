@@ -849,9 +849,11 @@
             }
             
             // Normalize to 0-1
-            for (let i = 0; i < gridX; i++) {
-                for (let j = 0; j < gridY; j++) {
-                    density[i][j] /= maxVal;
+            if (maxVal > 0) {
+                for (let i = 0; i < gridX; i++) {
+                    for (let j = 0; j < gridY; j++) {
+                        density[i][j] /= maxVal;
+                    }
                 }
             }
             

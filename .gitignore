@@ -1,0 +1,34 @@
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.7z
+*.rar
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ripley's K Analysis Tool</title>
+    <title>Ripley's K 分析工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
@@ -212,7 +212,7 @@
             </div>
             
             <button onclick="resetAll()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm transition-colors border border-slate-700">
-                Reset
+                重置
             </button>
         </div>
     </header>
@@ -223,8 +223,8 @@
         <!-- Upload Section -->
         <div id="uploadSection" class="max-w-xl mx-auto mt-16">
             <div class="text-center mb-6">
-                <h2 class="text-2xl font-bold mb-2">Ripley's K Analysis</h2>
-                <p class="text-slate-400 text-sm">Upload images → Mark targets with boxes → Generate Ripley's K result plots</p>
+                <h2 class="text-2xl font-bold mb-2">Ripley's K 分析</h2>
+                <p class="text-slate-400 text-sm">上传图像 → 框选目标 → 生成 Ripley's K 结果图</p>
             </div>
             
             <div id="dropZone" class="drop-zone rounded-xl p-12 text-center cursor-pointer bg-slate-800/30">
@@ -232,7 +232,7 @@
                 <svg class="w-12 h-12 text-cyan-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                 </svg>
-                <p class="text-sm font-medium mb-1">Drag and drop images or click to upload</p>
+                <p class="text-sm font-medium mb-1">拖放图像或点击上传</p>
                 <p class="text-xs text-slate-500">PNG, JPG, JPEG, BMP, TIFF</p>
             </div>
         </div>
@@ -247,38 +247,38 @@
                     <div class="flex items-center gap-2 mb-3 pb-3 border-b border-slate-700/50">
                         <button id="drawModeBtn" onclick="setMode('draw')" class="tool-btn active px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-medium flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                            Draw (D)
+                            画框 (D)
                         </button>
                         
                         <button id="selectModeBtn" onclick="setMode('select')" class="tool-btn px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-medium flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
-                            Select (S)
+                            选择 (S)
                         </button>
                         
                         <div class="h-4 w-px bg-slate-600"></div>
                         
                         <button onclick="clearAllBoxes()" class="tool-btn px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium border border-red-500/30">
-                            Clear All Boxes
+                            清空所有框
                         </button>
                         
                         <button onclick="undoLastBox()" class="tool-btn px-3 py-1.5 rounded-lg bg-slate-700 text-xs font-medium">
-                            Undo
+                            撤销
                         </button>
                         
                         <div class="flex-1"></div>
                         
-                        <span class="text-xs text-slate-400">Boxes: <span id="boxCount" class="text-cyan-400 font-bold">0</span></span>
+                        <span class="text-xs text-slate-400">框数: <span id="boxCount" class="text-cyan-400 font-bold">0</span></span>
                     </div>
 
                     <!-- Image List / Switcher -->
                     <div id="imageListContainer" class="mb-3 hidden">
                         <div class="flex items-center gap-2 pb-2 border-b border-slate-700/50">
-                            <span class="text-xs text-slate-400">Image List:</span>
+                            <span class="text-xs text-slate-400">图像列表:</span>
                             <div id="imageList" class="flex-1 flex gap-2 overflow-x-auto">
                                 <!-- Thumbnails will be inserted here -->
                             </div>
                             <button onclick="addMoreImages()" class="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs">
-                                + Add
+                                + 添加
                             </button>
                         </div>
                     </div>
@@ -293,7 +293,7 @@
 
                     <!-- Image Info -->
                     <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
-                        <span id="imgInfo">No image loaded</span>
+                        <span id="imgInfo">未加载图像</span>
                         <div class="flex items-center gap-2">
                             <button onclick="zoomImage(0.9)" class="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-xs">-</button>
                             <span id="zoomLevel" class="w-10 text-center">100%</span>
@@ -305,15 +305,15 @@
                 <!-- Quick Stats -->
                 <div class="grid grid-cols-3 gap-3">
                     <div class="glass-panel rounded-lg p-3">
-                        <p class="text-[10px] text-slate-400 uppercase">X Mean</p>
+                        <p class="text-[10px] text-slate-400 uppercase">X 均值</p>
                         <p id="meanX" class="stat-value text-lg font-bold text-cyan-400">-</p>
                     </div>
                     <div class="glass-panel rounded-lg p-3">
-                        <p class="text-[10px] text-slate-400 uppercase">Y Mean</p>
+                        <p class="text-[10px] text-slate-400 uppercase">Y 均值</p>
                         <p id="meanY" class="stat-value text-lg font-bold text-cyan-400">-</p>
                     </div>
                     <div class="glass-panel rounded-lg p-3">
-                        <p class="text-[10px] text-slate-400 uppercase">Std Dev</p>
+                        <p class="text-[10px] text-slate-400 uppercase">标准差</p>
                         <p id="stdDev" class="stat-value text-lg font-bold text-cyan-400">-</p>
                     </div>
                 </div>
@@ -326,17 +326,17 @@
                 <div class="glass-panel rounded-xl p-4">
                     <h3 class="text-sm font-bold mb-4 flex items-center gap-2">
                         <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                        Ripley's K Parameters
+                        Ripley's K 参数
                     </h3>
-                    <div class="text-[10px] text-slate-500 mb-3">Spatial point pattern analysis (clustered / regular / random)</div>
+                    <div class="text-[10px] text-slate-500 mb-3">空间点模式分析 (聚集/规则/随机)</div>
 
-                    <!-- Ripley's K parameter settings -->
+                    <!-- Ripley's K 参数设置 -->
                     <div id="ripleyParams" class="space-y-3">
-                        <h4 class="text-xs font-bold text-amber-400">Ripley's K Parameters</h4>
+                        <h4 class="text-xs font-bold text-amber-400">Ripley's K 参数</h4>
                         
                         <div>
                             <div class="flex justify-between mb-1">
-                                <label class="text-xs text-slate-300">Maximum Analysis Distance (μm)</label>
+                                <label class="text-xs text-slate-300">最大分析距离 (μm)</label>
                                 <span id="maxDistDisplay" class="param-display text-xs">300</span>
                             </div>
                             <input type="range" id="maxDistSlider" min="100" max="500" step="50" value="300" class="w-full" oninput="updateMaxDist(this.value)">
@@ -344,7 +344,7 @@
                         
                         <div>
                             <div class="flex justify-between mb-1">
-                                <label class="text-xs text-slate-300">Number of Distance Bins</label>
+                                <label class="text-xs text-slate-300">距离分段数</label>
                                 <span id="nDistancesDisplay" class="param-display text-xs">50</span>
                             </div>
                             <input type="range" id="nDistancesSlider" min="20" max="100" step="10" value="50" class="w-full" oninput="updateNDistances(this.value)">
@@ -352,7 +352,7 @@
                         
                         <div>
                             <div class="flex justify-between mb-1">
-                                <label class="text-xs text-slate-300">CSR Simulation Count</label>
+                                <label class="text-xs text-slate-300">CSR模拟次数</label>
                                 <span id="nSimulationsDisplay" class="param-display text-xs">399</span>
                             </div>
                             <input type="range" id="nSimulationsSlider" min="99" max="999" step="100" value="399" class="w-full" oninput="updateNSimulations(this.value)">
@@ -360,47 +360,47 @@
                         
                         <div class="flex items-center gap-2 pt-2">
                             <input type="checkbox" id="edgeCorrection" checked class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-amber-500">
-                            <label for="edgeCorrection" class="text-xs text-slate-300">Enable Edge Correction</label>
+                            <label for="edgeCorrection" class="text-xs text-slate-300">启用边缘校正</label>
                         </div>
                     </div>
 
                     <button onclick="generateRipleyAnalysis()" id="generateBtn" class="w-full mt-4 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/25 transition-all">
-                        Spatial Pattern Analysis
+                        空间模式分析
                     </button>
                 </div>
 
                 <!-- Results -->
                 <div class="glass-panel rounded-xl p-4">
-                    <h3 class="text-sm font-bold mb-3">Ripley's K Analysis Results</h3>
+                    <h3 class="text-sm font-bold mb-3">Ripley's K 分析结果</h3>
                     
                     <div id="resultPlaceholder" class="aspect-[4/3] rounded-lg bg-slate-800/50 flex items-center justify-center border border-dashed border-slate-700">
-                        <p class="text-xs text-slate-500">Waiting for analysis...</p>
+                        <p class="text-xs text-slate-500">等待分析...</p>
                     </div>
 
                     <div id="ripleyContainer" class="hidden relative space-y-4">
-                        <!-- L-function plot -->
+                        <!-- L函数图 -->
                         <div class="bg-white rounded-lg p-2">
                             <canvas id="ripleyLCanvas" class="w-full rounded"></canvas>
                         </div>
                         
-                        <!-- Statistical summary -->
+                        <!-- 统计摘要 -->
                         <div id="ripleyStats" class="bg-slate-800 rounded-lg p-3 text-xs space-y-2">
-                            <!-- Statistics will be filled dynamically -->
+                            <!-- 动态填充统计信息 -->
                         </div>
                     </div>
                     
                     <div id="downloadSection" class="hidden mt-3 space-y-2">
                         <div class="grid grid-cols-2 gap-2">
                             <button onclick="downloadResult('heatmap')" class="py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium transition-colors">
-                                Download Plot (PNG)
+                                下载分析图 (PNG)
                             </button>
                             <button onclick="downloadResult('data')" class="py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-medium transition-colors">
-                                Download Data (CSV)
+                                下载数据 (CSV)
                             </button>
                         </div>
                         <button onclick="exportCOCO()" class="w-full py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            Export COCO JSON
+                            导出 COCO JSON
                         </button>
                     </div>
                 </div>
@@ -409,23 +409,23 @@
                 <div class="glass-panel rounded-xl p-4">
                     <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
                         <svg class="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                        Scale Settings
+                        比例尺设置
                     </h3>
                     <div class="space-y-3">
                         <div class="flex items-center justify-between text-xs mb-2">
-                            <span class="text-slate-400">Current Scale:</span>
+                            <span class="text-slate-400">当前比例尺:</span>
                             <span id="currentPixelScale" class="text-pink-400 font-bold">0.675 μm/pixel</span>
                         </div>
                         <div>
-                            <label class="text-xs text-slate-300 block mb-1">Pixel Scale (μm/pixel)</label>
+                            <label class="text-xs text-slate-300 block mb-1">像素比例 (μm/pixel)</label>
                             <input type="number" id="pixelScaleInput" value="0.675" step="0.001" min="0.001" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-sm focus:border-pink-500 focus:outline-none">
                         </div>
                         <div class="text-[10px] text-slate-500">
-                            <p>• Default value: 0.675 μm/pixel</p>
-                            <p>• Actual image size: <span id="actualImageSize">1944 × 1382 μm</span></p>
+                            <p>• 默认值: 0.675 μm/pixel</p>
+                            <p>• 图像实际大小: <span id="actualImageSize">1944 × 1382 μm</span></p>
                         </div>
                         <button onclick="updatePixelScale()" class="w-full py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition-colors">
-                            Apply Scale
+                            应用比例尺
                         </button>
                     </div>
                 </div>
@@ -434,17 +434,17 @@
                 <div class="glass-panel rounded-xl p-4">
                     <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
                         <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                        COCO Annotation Import
+                        COCO 标注导入
                     </h3>
                     <div class="space-y-3">
                         <div class="text-[10px] text-slate-400 mb-2">
-                            Upload a previously exported COCO JSON file to automatically load annotation boxes
+                            上传之前导出的 COCO JSON 文件，自动加载标注框
                         </div>
                         <div class="relative">
                             <input type="file" id="cocoImportInput" accept=".json" class="hidden" onchange="importCOCO(this)">
                             <button onclick="document.getElementById('cocoImportInput').click()" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                                Import COCO JSON
+                                导入 COCO JSON
                             </button>
                         </div>
                         <div id="cocoImportStatus" class="hidden text-xs text-emerald-400 text-center"></div>
@@ -455,36 +455,36 @@
                 <div class="glass-panel rounded-xl p-4">
                     <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
                         <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-                        COCO Export Settings
+                        COCO 导出设置
                     </h3>
                     <div class="space-y-3">
                         <div class="flex items-center justify-between text-xs mb-2">
-                            <span class="text-slate-400">Annotated Boxes:</span>
+                            <span class="text-slate-400">已标注框数:</span>
                             <span id="totalBoxCount" class="text-emerald-400 font-bold">0</span>
                         </div>
                         <div>
-                            <label class="text-xs text-slate-300 block mb-1">Category Name</label>
+                            <label class="text-xs text-slate-300 block mb-1">类别名称 (Category Name)</label>
                             <input type="text" id="cocoCategoryName" value="stomata" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-sm focus:border-emerald-500 focus:outline-none">
                         </div>
                         <div>
-                            <label class="text-xs text-slate-300 block mb-1">Category ID</label>
+                            <label class="text-xs text-slate-300 block mb-1">类别ID (Category ID)</label>
                             <input type="number" id="cocoCategoryId" value="1" min="1" class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white text-sm focus:border-emerald-500 focus:outline-none">
                         </div>
                         <div class="text-[10px] text-slate-500">
-                            <p>• All annotation boxes will use the same category ID</p>
-                            <p>• COCO format can be used to train Detectron2/MMDetection</p>
+                            <p>• 所有标注框将使用相同的类别ID</p>
+                            <p>• COCO格式可用于训练Detectron2/MMDetection</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Instructions -->
                 <div class="glass-panel rounded-xl p-3 text-xs text-slate-400 space-y-1">
-                    <p><span class="text-amber-400">•</span> Draw mode: drag to create detection boxes / Shortcut <kbd class="bg-slate-700 px-1 rounded">D</kbd></p>
-                    <p><span class="text-amber-400">•</span> Select mode: move boxes / Shortcut <kbd class="bg-slate-700 px-1 rounded">S</kbd></p>
-                    <p><span class="text-amber-400">•</span> Undo: <kbd class="bg-slate-700 px-1 rounded">Ctrl+Z</kbd> / Delete selected: <kbd class="bg-slate-700 px-1 rounded">Delete</kbd></p>
-                    <p><span class="text-amber-400">•</span> Switch images: <kbd class="bg-slate-700 px-1 rounded">←</kbd> <kbd class="bg-slate-700 px-1 rounded">→</kbd> arrow keys</p>
-                    <p><span class="text-amber-400">•</span> Each image needs at least 5 annotation points to be included in analysis</p>
-                    <p><span class="text-amber-400">•</span> L(d) &gt; 0 clustered / L(d) &lt; 0 regular / L(d) ≈ 0 random</p>
+                    <p><span class="text-amber-400">•</span> 画框模式：拖拽创建检测框 / 快捷键 <kbd class="bg-slate-700 px-1 rounded">D</kbd></p>
+                    <p><span class="text-amber-400">•</span> 选择模式：移动框 / 快捷键 <kbd class="bg-slate-700 px-1 rounded">S</kbd></p>
+                    <p><span class="text-amber-400">•</span> 撤销：<kbd class="bg-slate-700 px-1 rounded">Ctrl+Z</kbd> / 删除选中：<kbd class="bg-slate-700 px-1 rounded">Delete</kbd></p>
+                    <p><span class="text-amber-400">•</span> 切换图像：<kbd class="bg-slate-700 px-1 rounded">←</kbd> <kbd class="bg-slate-700 px-1 rounded">→</kbd> 方向键</p>
+                    <p><span class="text-amber-400">•</span> 每张图至少需要 5 个标注点才能参与分析</p>
+                    <p><span class="text-amber-400">•</span> L(d) &gt; 0 聚集 / L(d) &lt; 0 规则分布 / L(d) ≈ 0 随机</p>
                 </div>
             </div>
         </div>
@@ -651,7 +651,7 @@
                 thumb.className = 'image-thumbnail'
                     + (index === currentImageIndex ? ' active' : '')
                     + (hasBoxes ? ' thumb-annotated' : '');
-                thumb.title = `${imgData.filename}${hasBoxes ? ` (${imgData.boxes.length} boxes)` : ' (not annotated)'}`;
+                thumb.title = `${imgData.filename}${hasBoxes ? ` (${imgData.boxes.length}框)` : ' (未标注)'}`;
                 thumb.innerHTML = `<img src="${imgData.img.src}" alt="${imgData.filename}"><span class="img-index">${index + 1}</span>`;
                 thumb.onclick = () => switchToImage(index);
                 list.appendChild(thumb);
@@ -954,7 +954,7 @@
 
         function zoomImage(factor) {
             zoom *= factor;
-            zoom = Math.max(0.1, Math.min(5, zoom)); // Allow 10%-500% zoom
+            zoom = Math.max(0.1, Math.min(5, zoom)); // 允许10%-500%缩放
             document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
             
             // Apply zoom to the inner wrapper only
@@ -1022,7 +1022,7 @@
             const newScale = parseFloat(input.value);
             
             if (isNaN(newScale) || newScale <= 0) {
-                alert('Please enter a valid scale value (greater than 0)');
+                alert('请输入有效的比例尺值（大于0）');
                 return;
             }
             
@@ -1039,13 +1039,13 @@
                 const heightUm = (refImg.height * newScale).toFixed(0);
                 document.getElementById('actualImageSize').textContent = `${widthUm} × ${heightUm} μm`;
             } else {
-                document.getElementById('actualImageSize').textContent = 'Displayed after image is loaded';
+                document.getElementById('actualImageSize').textContent = '加载图像后显示';
             }
             
             // Show success message
             const btn = document.querySelector('button[onclick="updatePixelScale()"]');
             const originalText = btn.textContent;
-            btn.textContent = '✓ Applied';
+            btn.textContent = '✓ 已应用';
             btn.classList.remove('bg-pink-600', 'hover:bg-pink-500');
             btn.classList.add('bg-green-600');
             
@@ -1100,24 +1100,34 @@
         function calculateEdgeWeight(point, d, bounds) {
             if (d <= 0) return 1.0;
             const { xmin, xmax, ymin, ymax } = bounds;
-            
-            // Distances from point to each boundary
+
             const dl = point.x - xmin;
             const dr = xmax - point.x;
             const db = point.y - ymin;
             const dt = ymax - point.y;
 
-            // Total angle outside bounds (as fraction of 2π)
-            let outsideFraction = 0;
-            // For each boundary closer than d, compute the arc angle outside
-            if (dl < d) outsideFraction += Math.acos(Math.min(1, dl / d)) / Math.PI;
-            if (dr < d) outsideFraction += Math.acos(Math.min(1, dr / d)) / Math.PI;
-            if (db < d) outsideFraction += Math.acos(Math.min(1, db / d)) / Math.PI;
-            if (dt < d) outsideFraction += Math.acos(Math.min(1, dt / d)) / Math.PI;
+            // Outside arc angle (radians) for each boundary closer than d.
+            // A boundary at distance d_b contributes arc 2*acos(d_b/d).
+            let outsideAngle = 0;
+            if (dl < d) outsideAngle += 2 * Math.acos(Math.min(1, dl / d));
+            if (dr < d) outsideAngle += 2 * Math.acos(Math.min(1, dr / d));
+            if (db < d) outsideAngle += 2 * Math.acos(Math.min(1, db / d));
+            if (dt < d) outsideAngle += 2 * Math.acos(Math.min(1, dt / d));
 
-            // Clamp: weight can't exceed 4 (full outside) or be less than 0.1
-            const weight = Math.max(0.1, 1 - Math.min(1, outsideFraction / 2));
-            return weight;
+            // Corner correction: when a rectangle corner falls inside the circle,
+            // the two adjacent boundary arcs overlap. The overlap angle is
+            // acos(da/d) + acos(dc/d) - π/2, which must be subtracted once.
+            const corners = [[dl, db], [dl, dt], [dr, db], [dr, dt]];
+            for (const [da, dc] of corners) {
+                if (da < d && dc < d && da * da + dc * dc < d * d) {
+                    outsideAngle -= Math.acos(Math.min(1, da / d)) + Math.acos(Math.min(1, dc / d)) - Math.PI / 2;
+                }
+            }
+
+            // Fraction of circumference inside the study area; clamp away from zero
+            // to avoid division-by-zero at exact corners.
+            const fractionInside = Math.max(0.01, (2 * Math.PI - outsideAngle) / (2 * Math.PI));
+            return fractionInside;
         }
         
         // Calculate Ripley's K function using pre-computed distance matrix
@@ -1214,13 +1224,13 @@
         async function generateRipleyAnalysis() {
             const imagesWithBoxes = images.filter(img => img.boxes.length > 0);
             if (imagesWithBoxes.length === 0) {
-                alert('Please annotate at least one region');
+                alert('请至少标注一个区域');
                 return;
             }
             
             const btn = document.getElementById('generateBtn');
             const originalText = btn.textContent;
-            btn.textContent = 'Analyzing (0%)...';
+            btn.textContent = '分析中 (0%)...';
             btn.disabled = true;
             
             await new Promise(resolve => setTimeout(resolve, 10));
@@ -1273,12 +1283,12 @@
                         if (!sharedDistances) sharedDistances = result.distances;
                     }
                     
-                    btn.textContent = `Analyzing (${Math.round((i + 1) / imageDataList.length * 25)}%)...`;
+                    btn.textContent = `分析中 (${Math.round((i + 1) / imageDataList.length * 25)}%)...`;
                     await new Promise(r => setTimeout(r, 0));
                 }
                 
                 if (validData.length < 1) {
-                    alert('Not enough valid samples (each image needs at least 5 annotation points)');
+                    alert('有效样本数不足（每张图需要至少5个标注点）');
                     btn.textContent = originalText;
                     btn.disabled = false;
                     return;
@@ -1299,7 +1309,7 @@
                     Lupper.push(percentileSorted(sorted, 97.5));
                 }
                 
-                btn.textContent = 'Analyzing (30%)...';
+                btn.textContent = '分析中 (30%)...';
                 await new Promise(r => setTimeout(r, 0));
                 
                 // Step 4: CSR simulations
@@ -1338,7 +1348,7 @@
                     }
                     
                     if (s % 20 === 0) {
-                        btn.textContent = `Analyzing (${Math.round(30 + (s / csrSimulations.length) * 55)}%)...`;
+                        btn.textContent = `分析中 (${Math.round(30 + (s / csrSimulations.length) * 55)}%)...`;
                         await new Promise(r => setTimeout(r, 0));
                     }
                 }
@@ -1352,7 +1362,7 @@
                     LcsrUpper.push(percentileSorted(sortedSims, 97.5));
                 }
                 
-                btn.textContent = 'Analyzing (88%)...';
+                btn.textContent = '分析中 (88%)...';
                 await new Promise(r => setTimeout(r, 0));
                 
                 // Step 6: Pattern detection
@@ -1424,7 +1434,7 @@
                 
             } catch (e) {
                 console.error('Ripley analysis failed:', e);
-                alert('Analysis failed: ' + e.message);
+                alert('分析失败: ' + e.message);
                 btn.textContent = originalText;
                 btn.disabled = false;
             }
@@ -1630,18 +1640,18 @@
             const nRnd = res.notSignificant.filter(v => v).length;
             
             statsDiv.innerHTML = `
-                <div class="font-bold text-amber-400 mb-2">Spatial Pattern Analysis Results</div>
+                <div class="font-bold text-amber-400 mb-2">空间模式分析结果</div>
                 <div class="grid grid-cols-2 gap-2">
-                    <div>Sample count: <span class="text-cyan-400">${res.nSamples}</span></div>
-                    <div>Mean density: <span class="text-cyan-400">${res.densityMean.toFixed(1)} ± ${res.densityStd.toFixed(1)}</span> /mm²</div>
+                    <div>样本数: <span class="text-cyan-400">${res.nSamples}</span></div>
+                    <div>平均密度: <span class="text-cyan-400">${res.densityMean.toFixed(1)} ± ${res.densityStd.toFixed(1)}</span> /mm²</div>
                     <div>MNND: <span class="text-cyan-400">${res.mnndMean.toFixed(1)} ± ${res.mnndStd.toFixed(1)}</span> μm</div>
                 </div>
                 <div class="mt-2 pt-2 border-t border-slate-600">
-                    <div class="text-xs text-slate-400 mb-1">Spatial pattern:</div>
+                    <div class="text-xs text-slate-400 mb-1">空间模式:</div>
                     <div class="flex gap-3">
-                        <span class="text-blue-400">● Regular: ${res.regRange}</span>
-                        <span class="text-red-400">● Clustered: ${res.cluRange}</span>
-                        <span class="text-green-400">■ Random: ${nRnd} pts</span>
+                        <span class="text-blue-400">● 规则: ${res.regRange}</span>
+                        <span class="text-red-400">● 聚集: ${res.cluRange}</span>
+                        <span class="text-green-400">■ 随机: ${nRnd} pts</span>
                     </div>
                 </div>
             `;
@@ -1653,7 +1663,7 @@
             if (!file) return;
             
             if (images.length === 0) {
-                alert('Please upload images before importing annotations');
+                alert('请先上传图像，再导入标注');
                 input.value = '';
                 return;
             }
@@ -1665,7 +1675,7 @@
                     
                     // Validate COCO format
                     if (!cocoData.images || !cocoData.annotations) {
-                        alert('Invalid COCO format: missing images or annotations fields');
+                        alert('无效的COCO格式：缺少images或annotations字段');
                         return;
                     }
                     
@@ -1765,15 +1775,15 @@
                         categoryCount.forEach((count, catId) => {
                             const cat = categories.find(c => c.id === catId);
                             const catName = cat ? cat.name : `ID:${catId}`;
-                            catParts.push(`${catName}: ${count}`);
+                            catParts.push(`${catName}: ${count}个`);
                         });
-                        catSummary = '\nCategory: ' + catParts.join(', ');
+                        catSummary = '\n类别: ' + catParts.join(', ');
                     }
                     
                     // Show status
                     const statusEl = document.getElementById('cocoImportStatus');
                     statusEl.classList.remove('hidden');
-                    statusEl.innerHTML = `Import successful: ${matchedCount}/${importedCount} annotation boxes${catSummary.replace(/\n/g, '<br>')}`;
+                    statusEl.innerHTML = `导入成功: ${matchedCount}/${importedCount} 个标注框${catSummary.replace(/\n/g, '<br>')}`;
                     statusEl.className = 'text-xs text-emerald-400 text-center mt-2 space-y-1';
                     
                     // Auto-hide status after 5 seconds
@@ -1781,11 +1791,11 @@
                         statusEl.classList.add('hidden');
                     }, 5000);
                     
-                    console.log(`COCO import: ${matchedCount}/${importedCount} annotation boxes matched to images${catSummary}`);
+                    console.log(`COCO导入: ${matchedCount}/${importedCount} 个标注框匹配到图像${catSummary}`);
                     
                 } catch (err) {
-                    console.error('COCO import failed:', err);
-                    alert('Import failed: ' + err.message);
+                    console.error('COCO导入失败:', err);
+                    alert('导入失败: ' + err.message);
                 }
             };
             reader.readAsText(file);
@@ -1795,14 +1805,14 @@
         // Export annotations in COCO format
         function exportCOCO() {
             if (images.length === 0) {
-                alert('Please upload images first');
+                alert('请先上传图像');
                 return;
             }
             
             // Check if any boxes are annotated
             const totalBoxes = images.reduce((sum, img) => sum + img.boxes.length, 0);
             if (totalBoxes === 0) {
-                alert('Please annotate at least one region');
+                alert('请至少标注一个区域');
                 return;
             }
             
@@ -1887,7 +1897,7 @@
             link.click();
             
             // Show success message with stats
-            alert(`COCO export successful!\n\nStatistics:\n- Image count: ${images.length}\n- Annotation box count: ${totalBoxes}\n- Category: ${categoryName} (ID: ${categoryId})`);
+            alert(`COCO格式导出成功！\n\n统计信息：\n- 图像数量: ${images.length}\n- 标注框数量: ${totalBoxes}\n- 类别: ${categoryName} (ID: ${categoryId})`);
         }
 
         function downloadResult(type) {
@@ -1968,7 +1978,7 @@
         function resetAll() {
             const totalBoxes = images.reduce((sum, img) => sum + img.boxes.length, 0);
             if (totalBoxes > 0) {
-                if (!confirm(`There are currently ${images.length} images and ${totalBoxes} annotation boxes. Resetting will remove everything. Confirm reset?`)) return;
+                if (!confirm(`当前共有 ${images.length} 张图像、${totalBoxes} 个标注框，重置后将全部丢失。确认重置？`)) return;
             }
             location.reload();
         }
